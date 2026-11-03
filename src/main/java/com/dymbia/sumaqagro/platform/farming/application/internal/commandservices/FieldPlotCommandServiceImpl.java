@@ -6,9 +6,9 @@ import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterField
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.FieldPlotRepository;
 import com.dymbia.sumaqagro.platform.shared.application.error.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
-import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {

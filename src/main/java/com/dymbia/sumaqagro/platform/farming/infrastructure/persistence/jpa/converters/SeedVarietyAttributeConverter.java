@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.converters;
 
-import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.SeedVariety;
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SeedVariety;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

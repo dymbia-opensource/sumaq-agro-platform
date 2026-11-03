@@ -1,4 +1,4 @@
-package com.dymbia.sumaqagro.platform.farming.domain.model.aggregates;
+package com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects;
 
 /**
  * Seed variety used in a crop campaign

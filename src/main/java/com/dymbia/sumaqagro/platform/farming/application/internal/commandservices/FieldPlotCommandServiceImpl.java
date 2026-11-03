@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
     // Same limit as the web app
-    private static final long SEED_PLAN_PLOT_QUOTA = 3;
+    private static final long SEED_PLAN_PLOT_QUOTA = 4;
     private final FieldPlotRepository fieldPlotRepository;
 
     public FieldPlotCommandServiceImpl(FieldPlotRepository fieldPlotRepository) {

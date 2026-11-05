@@ -1,12 +1,11 @@
 package com.dymbia.sumaqagro.platform.crophealth.domain.model.aggregates;
 
+import com.dymbia.sumaqagro.platform.crophealth.domain.model.commands.RecordPestReportCommand;
 import com.dymbia.sumaqagro.platform.crophealth.domain.model.valueobjects.PestReportSeverity;
 import com.dymbia.sumaqagro.platform.crophealth.domain.model.valueobjects.PestReportStatus;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import jakarta.persistence.*;
 import lombok.Getter;
-
-import java.util.Objects;
 
 /**
  * Represents a pest report submitted by a user for a specific plot.
@@ -14,7 +13,6 @@ import java.util.Objects;
 
 @Getter
 @Entity
-@Table(name = "pest_reports")
 public class PestReport extends AuditableAbstractAggregateRoot<PestReport> {
 
     @Id
@@ -38,42 +36,26 @@ public class PestReport extends AuditableAbstractAggregateRoot<PestReport> {
     @Column(nullable = false)
     private PestReportStatus status;
 
+    /**
+     * Required by JPA. It's obligatory. It must be empty and protected. It is used by JPA to create an instance of the entity when retrieving it from the database.
+     */
     protected PestReport() {
-        // Required by JPA.
+
     }
 
-    public PestReport(
-            Long plotId,
-            Long reporterId,
-            String description,
-            PestReportSeverity severity
-    ) {
-        if (plotId == null || plotId <= 0) {
-            throw new IllegalArgumentException(
-                    "Plot ID must be greater than zero"
-            );
-        }
-
-        if (reporterId == null || reporterId <= 0) {
-            throw new IllegalArgumentException(
-                    "Reporter ID must be greater than zero"
-            );
-        }
-
-        if (description == null || description.trim().length() < 10) {
-            throw new IllegalArgumentException(
-                    "Description must contain at least 10 characters"
-            );
-        }
-
-        this.plotId = plotId;
-        this.reporterId = reporterId;
-        this.description = description.trim();
-        this.severity = Objects.requireNonNull(
-                severity, "Severity is required"
-        );
+    /**
+     * Creates a pest report from a validated record command.
+     *
+     * @param command command containing the plot, reporter, description and severity
+     */
+    public PestReport(RecordPestReportCommand command) {
+        this.plotId = command.plotId();
+        this.reporterId = command.reporterId();
+        this.description = command.description().trim();
+        this.severity = command.severity();
         this.status = PestReportStatus.PENDING;
     }
+
 
     public void markInspected() {
         if (status != PestReportStatus.PENDING) {

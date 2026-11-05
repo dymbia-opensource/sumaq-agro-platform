@@ -16,15 +16,7 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
- * Assembler that converts an {@link ApplicationError} into an RFC 9457 problem detail.
- * <p>
- * The status comes from the error code. The {@code detail} is a message of {@code messages.properties}
- * translated to the language of the request ({@code Accept-Language}), found by the error code
- * ({@code error.<code>.message}) or, when there is none, by its category. The {@code details} of the error
- * go in the {@code details} property.
- * </p>
- *
- * @since 1.0
+ * Assembler for transforming {@link ApplicationError} instances into RFC 9457 {@link ProblemDetail} responses.
  */
 @NullMarked
 public final class ProblemDetailFromApplicationErrorAssembler {
@@ -35,6 +27,12 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     private ProblemDetailFromApplicationErrorAssembler() {
     }
 
+    /**
+     * Transforms an {@link ApplicationError} into a Spring {@link ProblemDetail}.
+     *
+     * @param error the application error to transform
+     * @return the assembled ProblemDetail
+     */
     public static ProblemDetail toProblemDetailFromApplicationError(ApplicationError error) {
         HttpStatusCode status = toStatusFromErrorCode(error.code());
         String localizedMessage = toLocalizedMessageFromApplicationError(error);
@@ -51,6 +49,12 @@ public final class ProblemDetailFromApplicationErrorAssembler {
         return problemDetail;
     }
 
+    /**
+     * Transforms an {@link ApplicationError} into a {@link ResponseEntity} containing a {@link ProblemDetail}.
+     *
+     * @param error the application error to transform
+     * @return response entity with corresponding HTTP status and ProblemDetail body
+     */
     public static ResponseEntity<ProblemDetail> toResponseFromApplicationError(ApplicationError error) {
         ProblemDetail problemDetail = toProblemDetailFromApplicationError(error);
         return ResponseEntity.status(problemDetail.getStatus()).body(problemDetail);
@@ -120,11 +124,9 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     }
 
     private static @Nullable String toLocalizedMessageOrNull(String key, Object... args) {
+        Locale locale = LocaleContextHolder.getLocale();
         try {
-            // No fallback to the language of the server: an English request gets the English messages
-            // even when the server runs with a Spanish system locale
-            ResourceBundle bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, LocaleContextHolder.getLocale(),
-                    ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
+            ResourceBundle bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, locale);
             if (!bundle.containsKey(key)) {
                 return null;
             }
@@ -136,10 +138,25 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     }
 
     private static String toLocalizedMessageWithFallback(String key, String fallback, Object... args) {
-        String message = toLocalizedMessageOrNull(key, args);
-        return message != null ? message : fallback;
+        Locale locale = LocaleContextHolder.getLocale();
+        try {
+            ResourceBundle bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, locale);
+            if (!bundle.containsKey(key)) {
+                return fallback;
+            }
+            String template = bundle.getString(key);
+            return MessageFormat.format(template, args);
+        } catch (MissingResourceException ex) {
+            return fallback;
+        }
     }
 
+    /**
+     * Determines the appropriate HTTP status code for a given error code.
+     *
+     * @param errorCode the error code string (e.g., "PROFILE_NOT_FOUND", "VALIDATION_ERROR")
+     * @return the corresponding HttpStatus
+     */
     public static HttpStatusCode toStatusFromErrorCode(String errorCode) {
         return switch (errorCode) {
             case "VALIDATION_ERROR" -> HttpStatus.BAD_REQUEST;

@@ -11,26 +11,30 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.net.URI;
 import java.text.MessageFormat;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
- * Provides centralized exception handling for REST controllers.
- * <p>
- * Converts exceptions into standardized HTTP Problem Details responses (RFC 9457)
- * through {@link ProblemDetailFromApplicationErrorAssembler}, the same assembler that controllers
- * use for the errors returned by the application services.
- * </p>
- *
- * @since 1.0
+ * Global exception handler for REST API.
+ * Provides centralized exception handling for the entire application,
+ * ensuring all unhandled exceptions are translated to consistent
+ * RFC 9457 ProblemDetail HTTP responses.
  */
 @RestControllerAdvice
 @NullMarked
 public class GlobalExceptionHandler {
     private static final String MESSAGES_BASENAME = "messages";
 
+    /**
+     * Handles validation exceptions from Spring's request body validation.
+     * Maps validation failure to a standardized RFC 9457 ProblemDetail response.
+     *
+     * @param ex the validation exception from @Valid binding
+     * @return error response with BAD_REQUEST status and detailed invalid parameters
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
         var fieldErrors = ex.getBindingResult().getFieldErrors();
@@ -62,6 +66,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /**
+     * Handles invalid request arguments such as malformed UUID path or payload values.
+     *
+     * @param ex the illegal argument exception
+     * @return error response with BAD_REQUEST status
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
         var applicationError = ApplicationError.validationError(
@@ -71,6 +81,13 @@ public class GlobalExceptionHandler {
         return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
     }
 
+    /**
+     * Handles unexpected runtime exceptions not caught by specific handlers.
+     * Maps to a generic unexpected error response.
+     *
+     * @param ex the unhandled runtime exception
+     * @return error response with INTERNAL_SERVER_ERROR status
+     */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ProblemDetail> handleRuntimeException(RuntimeException ex) {
         var applicationError = ApplicationError.unexpected(
@@ -80,6 +97,13 @@ public class GlobalExceptionHandler {
         return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
     }
 
+    /**
+     * Handles all other exceptions not matched by specific handlers.
+     * Provides a final fallback for any unexpected exception type.
+     *
+     * @param ex the exception
+     * @return error response with INTERNAL_SERVER_ERROR status
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception ex) {
         var applicationError = ApplicationError.unexpected(
@@ -91,7 +115,6 @@ public class GlobalExceptionHandler {
 
     private String resolveMessageOrDefault(String key, String defaultValue, Object... args) {
         try {
-            // No fallback to the language of the server: an English request gets the English messages
             var bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, LocaleContextHolder.getLocale(),
                     ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
             if (!bundle.containsKey(key)) {

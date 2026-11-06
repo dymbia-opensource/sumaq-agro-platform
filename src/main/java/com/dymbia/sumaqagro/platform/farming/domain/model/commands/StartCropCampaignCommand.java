@@ -22,16 +22,16 @@ public record StartCropCampaignCommand(Long plotId, String season, CropType crop
      */
     public StartCropCampaignCommand{
         if(plotId == null||plotId <= 0) {
-            throw new IllegalArgumentException("crop.campaing.error.plotId.invalid");
+            throw new IllegalArgumentException("crop.campaign.error.plotId.invalid");
         }
         if(season == null || !season.matches("^\\d{4}-(I|II)$")) {
-            throw new IllegalArgumentException("crop.campaing.error.season.invalid");
+            throw new IllegalArgumentException("crop.campaign.error.season.invalid");
         }
         if(cropType == null) {
-            throw new IllegalArgumentException("crop.campaing.error.cropType.required");
+            throw new IllegalArgumentException("crop.campaign.error.cropType.required");
         }
         if(seedVariety == null) {
-            throw new IllegalArgumentException("crop.campaing.error.seedVariety.notBlank");
+            throw new IllegalArgumentException("crop.campaign.error.seedVariety.notBlank");
         }
     }
 

@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.iam.infrastructure.tokens.jwt.services;
 
-import com.dymbia.sumaqagro.platform.iam.application.internal.outboundservices.tokens.TokenService;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.tokens.jwt.BearerTokenService;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -12,12 +12,30 @@ import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.util.StringUtils;
 
 /**
  * Issues and verifies signed JWTs using the configured HMAC key.
  */
 @Service
-public class TokenServiceImpl implements TokenService {
+public class TokenServiceImpl implements BearerTokenService {
+
+    private static final String BEARER_TOKEN_PREFIX = "Bearer ";
+
+    /** {@inheritDoc} */
+    @Override
+    public String getBearerTokenFrom(HttpServletRequest request) {
+        var authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        if (!StringUtils.startsWithIgnoreCase(authorization, BEARER_TOKEN_PREFIX)) {
+            return null;
+        }
+
+        var token = authorization.substring(BEARER_TOKEN_PREFIX.length()).strip();
+        return token.isEmpty() ? null : token;
+    }
 
     @Value("${authorization.jwt.secret}")
     private String secret;

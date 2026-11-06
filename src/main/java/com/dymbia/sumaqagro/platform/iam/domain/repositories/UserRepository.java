@@ -8,6 +8,8 @@ import java.util.Optional;
 public interface UserRepository {
 
     Optional<User> findByEmail(EmailAddress email);
+
     boolean existsByEmail(EmailAddress email);
+
     User save(User user);
 }

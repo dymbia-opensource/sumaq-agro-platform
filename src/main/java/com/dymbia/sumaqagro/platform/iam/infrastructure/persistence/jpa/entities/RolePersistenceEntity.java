@@ -5,14 +5,20 @@ import com.dymbia.sumaqagro.platform.shared.infrastructure.persistence.jpa.entit
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 
-@Getter
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+/**
+ * JPA persistence entity for IAM roles.
+ */
 @Entity
 @Table(name = "roles")
+@Getter
+@NoArgsConstructor
 public class RolePersistenceEntity extends AuditableAbstractPersistenceEntity {
+
+    @Setter
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, unique = true, length = 40)
+    @Column(name = "name", nullable = false, unique = true, length = 40)
     private Roles name;
 }

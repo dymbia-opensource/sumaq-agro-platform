@@ -1,10 +1,9 @@
 package com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.services;
 
-import com.dymbia.sumaqagro.platform.iam.domain.model.entities.Role;
 import com.dymbia.sumaqagro.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.dymbia.sumaqagro.platform.iam.domain.repositories.UserRepository;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Service;
  * Loads the current account and its role authorities for Spring Security.
  */
 @Service
+@NullMarked
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -29,17 +29,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
      * @throws UsernameNotFoundException if the account does not exist
      */
     @Override
-    public UserDetails loadUserByUsername(String username) {
+    public UserDetailsImpl loadUserByUsername(String username) {
         var user = userRepository.findByEmail(new EmailAddress(username))
                 .orElseThrow(() -> new UsernameNotFoundException("Account not found"));
 
-        var authorities = user.getRoles().stream()
-                .map(Role::getStringName)
-                .toArray(String[]::new);
-
-        return User.withUsername(user.getEmail().value())
-                .password(user.getPasswordHash())
-                .authorities(authorities)
-                .build();
+        return UserDetailsImpl.build(user);
     }
 }

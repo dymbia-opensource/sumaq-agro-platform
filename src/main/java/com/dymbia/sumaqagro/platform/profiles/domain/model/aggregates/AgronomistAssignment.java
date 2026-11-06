@@ -1,5 +1,6 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates;
 
+import com.dymbia.sumaqagro.platform.profiles.domain.model.events.AgronomistAssignedToPlotEvent;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.AssignAgronomistToPlotCommand;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import jakarta.persistence.*;

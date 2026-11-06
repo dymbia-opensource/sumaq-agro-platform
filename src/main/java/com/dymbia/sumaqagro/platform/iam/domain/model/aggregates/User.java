@@ -3,13 +3,14 @@ package com.dymbia.sumaqagro.platform.iam.domain.model.aggregates;
 import com.dymbia.sumaqagro.platform.iam.domain.model.entities.Role;
 import com.dymbia.sumaqagro.platform.iam.domain.model.valueobjects.EmailAddress;
 
+import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
 import java.util.Objects;
 import java.util.Set;
 
 @Getter
-public class User {
+public class User extends AbstractDomainAggregateRoot<User> {
     private final Long id;
     private final EmailAddress email;
     private final String passwordHash;

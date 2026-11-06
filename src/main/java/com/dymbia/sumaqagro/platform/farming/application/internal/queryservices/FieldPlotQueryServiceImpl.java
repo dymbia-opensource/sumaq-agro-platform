@@ -4,7 +4,7 @@ import com.dymbia.sumaqagro.platform.farming.application.queryservices.FieldPlot
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetAllFieldPlotsByOwnerUserIdQuery;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotByIdQuery;
-import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.FieldPlotRepository;
+import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

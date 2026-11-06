@@ -76,7 +76,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
         var applicationError = ApplicationError.validationError(
                 resolveMessageOrDefault("validation.request.argument", "request-argument"),
-                ex.getMessage() != null ? ex.getMessage() : resolveMessageOrDefault("validation.request.failed", "Request validation failed")
+                ex.getMessage() != null ? resolveMessageOrDefault(ex.getMessage(), ex.getMessage()) : resolveMessageOrDefault("validation.request.failed", "Request validation failed")
         );
         return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(applicationError);
     }

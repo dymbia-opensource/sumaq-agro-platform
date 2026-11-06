@@ -6,12 +6,12 @@ import java.math.BigDecimal;
 public record RegisterFieldPlotCommand(Long ownerUserId, String name, String region, BigDecimal declaredAreaHectares) {
     public RegisterFieldPlotCommand{
         if(ownerUserId==null||ownerUserId<=0)
-            throw new IllegalArgumentException("field.plot.error.ownerUserId.invalid");
+            throw new IllegalArgumentException("ownerUserId must be greater than 0.");
         if (name==null||name.isBlank())
-            throw new IllegalArgumentException("field.plot.error.name.notBlank");
+            throw new IllegalArgumentException("Plot name must not be blank.");
         if (region==null||region.isBlank())
-            throw new IllegalArgumentException("field.plot.error.region.notBlank");
+            throw new IllegalArgumentException("Region must not be blank.");
         if (declaredAreaHectares==null||declaredAreaHectares.signum() < 0)
-            throw new IllegalArgumentException("field.plot.error.area.invalid");
+            throw new IllegalArgumentException("Area must be zero or positive.");
     }
 }

@@ -117,6 +117,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Provides ImmutablePair for the authentication result. -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+
 		<!-- Password hashing -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>

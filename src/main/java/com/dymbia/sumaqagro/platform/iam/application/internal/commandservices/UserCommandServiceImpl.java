@@ -8,6 +8,7 @@ import com.dymbia.sumaqagro.platform.iam.domain.model.commands.SignInCommand;
 import com.dymbia.sumaqagro.platform.iam.domain.model.commands.SignUpCommand;
 import com.dymbia.sumaqagro.platform.iam.domain.repositories.RoleRepository;
 import com.dymbia.sumaqagro.platform.iam.domain.repositories.UserRepository;
+import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -25,8 +26,8 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final int MAX_BCRYPT_PASSWORD_BYTES = 72;
-    private static final ApplicationError INVALID_CREDENTIALS =
-            new ApplicationError("INVALID_CREDENTIALS", "Invalid email or password");
+    private static final ApplicationError INVALID_CREDENTIALS = new ApplicationError("INVALID_CREDENTIALS", "Invalid email or password");
+    private final ProfilesContextFacade profilesContextFacade;
 
     private final UserRepository userRepository;
     private final HashingService hashingService;
@@ -37,12 +38,14 @@ public class UserCommandServiceImpl implements UserCommandService {
             UserRepository userRepository,
             HashingService hashingService,
             TokenService tokenService,
-            RoleRepository roleRepository
+            RoleRepository roleRepository,
+            ProfilesContextFacade profilesContextFacade
     ) {
         this.userRepository = userRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.roleRepository = roleRepository;
+        this.profilesContextFacade = profilesContextFacade;
     }
 
     /**
@@ -77,7 +80,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     }
 
     /**
-     * Resolves the requested role, hashes the password and persists the account.
+     * Resolves the requested role, hashes the password and persists the account and its initial profile.
      *
      * @param command the registration data
      * @return the persisted user or an application error
@@ -123,6 +126,13 @@ public class UserCommandServiceImpl implements UserCommandService {
         var passwordHash = hashingService.encode(password);
         var user = new User(command.email(), passwordHash, role.get());
 
-        return Result.success(userRepository.save(user));
+        var savedUser = userRepository.save(user);
+        profilesContextFacade.createProfile(
+                savedUser.getId(),
+                command.firstName(),
+                command.lastName()
+        );
+
+        return Result.success(savedUser);
     }
 }

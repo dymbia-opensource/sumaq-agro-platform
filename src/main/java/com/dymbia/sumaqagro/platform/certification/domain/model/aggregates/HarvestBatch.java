@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.certification.domain.model.aggregates;
 
+import com.dymbia.sumaqagro.platform.certification.domain.model.events.BatchGradedEvent;
+import com.dymbia.sumaqagro.platform.certification.domain.model.events.DeliveredBatchWeighedEvent;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
@@ -126,6 +128,7 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
             throw new IllegalArgumentException("Batch weight must be greater than zero");
         }
         this.netWeightKg = netWeightKg;
+        registerDomainEvent(new DeliveredBatchWeighedEvent(id, plotId, netWeightKg));
     }
 
     /**
@@ -189,6 +192,7 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
         this.thirdCaliberPercentage = thirdPercentage;
         this.pestDamagePercentage = pestDamagePercentage;
         this.status = BatchStatus.GRADED;
+        registerDomainEvent(new BatchGradedEvent(id, cropType));
     }
 
     /**
@@ -208,6 +212,7 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
         this.coffeeCuppingScore = totalScore;
         this.coffeeFermentDefect = fermentDefect;
         this.status = BatchStatus.GRADED;
+        registerDomainEvent(new BatchGradedEvent(id, cropType));
     }
 
     /**

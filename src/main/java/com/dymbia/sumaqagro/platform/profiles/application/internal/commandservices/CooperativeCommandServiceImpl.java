@@ -7,36 +7,31 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.InviteAgrono
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.RegisterCooperativeCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.AgronomistInvitation;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
-import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
+import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories.CooperativePersistenceRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Implementation of CooperativeCommandService.
- *
- * @since 1.0
- */
 @Service
 public class CooperativeCommandServiceImpl implements CooperativeCommandService {
 
-    private final CooperativeRepository cooperativeRepository;
+    private final CooperativePersistenceRepository cooperativePersistenceRepository;
 
-    public CooperativeCommandServiceImpl(CooperativeRepository cooperativeRepository) {
-        this.cooperativeRepository = cooperativeRepository;
+    public CooperativeCommandServiceImpl(CooperativePersistenceRepository cooperativePersistenceRepository) {
+        this.cooperativePersistenceRepository = cooperativePersistenceRepository;
     }
 
     @Override
     @Transactional
     public Result<Cooperative, ApplicationError> handle(RegisterCooperativeCommand command) {
         try {
-            if (cooperativeRepository.existsByRuc(command.ruc())) {
+            if (cooperativePersistenceRepository.existsByRuc(command.ruc())) {
                 return Result.failure(ApplicationError.conflict("Cooperative", "RUC already registered"));
             }
 
             Cooperative cooperative = new Cooperative(command);
-            Cooperative saved = cooperativeRepository.save(cooperative);
+            Cooperative saved = cooperativePersistenceRepository.save(cooperative);
 
             return Result.success(saved);
         } catch (IllegalArgumentException e) {
@@ -50,7 +45,7 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
     @Transactional
     public Result<CooperativeMember, ApplicationError> handle(AddCooperativeMemberCommand command) {
         try {
-            var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
+            var cooperativeOptional = cooperativePersistenceRepository.findById(command.cooperativeId());
 
             if (cooperativeOptional.isEmpty()) {
                 return Result.failure(ApplicationError.notFound("Cooperative", "id=" + command.cooperativeId()));
@@ -58,7 +53,7 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
 
             Cooperative cooperative = cooperativeOptional.get();
             CooperativeMember member = cooperative.addMember(command);
-            cooperativeRepository.save(cooperative);
+            cooperativePersistenceRepository.save(cooperative);
 
             return Result.success(member);
         } catch (IllegalArgumentException e) {
@@ -72,7 +67,7 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
     @Transactional
     public Result<AgronomistInvitation, ApplicationError> handle(InviteAgronomistCommand command) {
         try {
-            var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
+            var cooperativeOptional = cooperativePersistenceRepository.findById(command.cooperativeId());
 
             if (cooperativeOptional.isEmpty()) {
                 return Result.failure(ApplicationError.notFound("Cooperative", "id=" + command.cooperativeId()));
@@ -80,9 +75,9 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
 
             Cooperative cooperative = cooperativeOptional.get();
             AgronomistInvitation invitation = cooperative.inviteAgronomist(command);
-            cooperativeRepository.save(cooperative);
+            cooperativePersistenceRepository.save(cooperative);
 
-            // TODO: send invitation email using NotificationSender (Brevo) in a later step
+            // TODO: send invitation email using NotificationSender (Brevo)
 
             return Result.success(invitation);
         } catch (IllegalArgumentException e) {

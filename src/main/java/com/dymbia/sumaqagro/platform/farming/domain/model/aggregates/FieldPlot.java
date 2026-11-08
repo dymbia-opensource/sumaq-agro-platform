@@ -19,13 +19,13 @@ import java.math.BigDecimal;
  */
 @Getter
 public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
-    private final Long id;
-    private final Long ownerUserId;
-    private final String name;
-    private final String region;
-    private final PlotStatus status;
-    private final BigDecimal areaHectares;
-    private final String agroMonitoringPolygonId;
+    private Long id;
+    private Long ownerUserId;
+    private String name;
+    private String region;
+    private PlotStatus status;
+    private BigDecimal areaHectares;
+    private String agroMonitoringPolygonId;
 
     private FieldPlot(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                       BigDecimal areaHectares, String agroMonitoringPolygonId) {

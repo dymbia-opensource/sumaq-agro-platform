@@ -7,7 +7,9 @@ import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.FieldPlot
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.RegisterFieldPlotResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.FieldPlotResourceFromEntityAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.RegisterFieldPlotCommandFromResourceAssembler;
+import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
+import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ProblemDetailFromApplicationErrorAssembler;
 import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,7 +49,13 @@ public class FieldPlotsController {
     @PostMapping
     public ResponseEntity<?> registerFieldPlot(@RequestBody RegisterFieldPlotResource resource) {
         var command = RegisterFieldPlotCommandFromResourceAssembler.toCommandFromResource(resource);
-        return ResponseEntityAssembler.toResponseEntityFromResult(fieldPlotCommandService.handle(command),
+        // The command only returns the id; the plot is read back through the query service (CQRS)
+        Result<FieldPlot, ApplicationError> result = fieldPlotCommandService.handle(command)
+                .flatMap(fieldPlotId -> fieldPlotQueryService.handle(new GetFieldPlotByIdQuery(fieldPlotId))
+                        .<Result<FieldPlot, ApplicationError>>map(Result::success)
+                        .orElseGet(() -> Result.failure(
+                                ApplicationError.notFound("FieldPlot", fieldPlotId.toString()))));
+        return ResponseEntityAssembler.toResponseEntityFromResult(result,
                 FieldPlotResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.CREATED);
     }
 

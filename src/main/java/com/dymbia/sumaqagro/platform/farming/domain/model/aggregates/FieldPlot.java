@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.domain.model.aggregates;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.PlotBoundaryDelineatedEvent;
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotBoundary;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotStatus;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
@@ -19,6 +21,11 @@ import java.math.BigDecimal;
  */
 @Getter
 public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
+
+    // Area limits of the monitoring provider
+    private static final BigDecimal MIN_POLYGON_HECTARES = BigDecimal.ONE;
+    private static final BigDecimal MAX_POLYGON_HECTARES = BigDecimal.valueOf(3000);
+
     private Long id;
     private Long ownerUserId;
     private String name;
@@ -26,6 +33,8 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     private PlotStatus status;
     private BigDecimal areaHectares;
     private String agroMonitoringPolygonId;
+
+    private PlotBoundary boundary;
 
     private FieldPlot(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                       BigDecimal areaHectares, String agroMonitoringPolygonId) {
@@ -65,5 +74,59 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     public static FieldPlot reconstitute(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                                          BigDecimal areaHectares, String agroMonitoringPolygonId) {
         return new FieldPlot(id, ownerUserId, name, region, status, areaHectares, agroMonitoringPolygonId);
+    }
+
+    /**
+     * Delineates the boundary of the field plot
+     *
+     * @param boundary the plot boundary
+     * @throws IllegalArgumentException if the boundary is null
+     */
+    public void delineateBoundary(PlotBoundary boundary)
+    {
+        if (boundary == null) {
+            throw new IllegalArgumentException("field.plot.error.boundary.required");
+        }
+        var area = boundary.calculateArea();
+        if (area.compareTo(MIN_POLYGON_HECTARES) < 0 || area.compareTo(MAX_POLYGON_HECTARES) > 0) {
+            throw new IllegalArgumentException("field.plot.error.boundary.areaOutOfRange");
+        }
+        var previousPolygonId = this.agroMonitoringPolygonId;
+        this.boundary = boundary;
+        this.areaHectares =area;
+        this.agroMonitoringPolygonId = null;
+        this.status = PlotStatus.WITHOUT_POLYGON;
+        registerDomainEvent(new PlotBoundaryDelineatedEvent(id,name,boundary,previousPolygonId));
+    }
+
+    /**
+     * Links a polygon to the field plot
+     *
+     * @param polygonId the polygon id
+     * @throws IllegalArgumentException if the polygon id is null or blank
+     * @throws IllegalStateException if the field plot does not have a boundary
+     */
+    public void linkPolygon(String polygonId)
+    {
+        if (polygonId == null || polygonId.isBlank())
+        {
+            throw new IllegalArgumentException("field.plot.error.polygonId.notBlank");
+        }
+        if (!hasPolygon())
+        {
+            throw new IllegalStateException("field.plot.error.boundary.required");
+        }
+        this.agroMonitoringPolygonId = polygonId;
+        this.status = PlotStatus.ACTIVE_MONITORING;
+    }
+
+    /**
+     * Checks if the field plot has a linked polygon
+     *
+     * @return {@code true} if the field plot has a linked polygon, {@code false} otherwise
+     */
+    public boolean hasPolygon()
+    {
+        return boundary!=null;
     }
 }

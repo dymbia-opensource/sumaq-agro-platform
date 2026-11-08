@@ -1,4 +1,4 @@
-hpackage com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.repositories;
+package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.repositories;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CampaignStatus;
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.entities.CropCampaignPersistenceEntity;

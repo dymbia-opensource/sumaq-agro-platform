@@ -27,7 +27,7 @@ The code is organized by **bounded context** under `com.dymbia.sumaqagro.platfor
 |---|---|---|
 | `shared` | Shared Kernel | Base classes, `Result` and `ApplicationError`, error handling, naming strategy and configuration used by every context. |
 | `farming` | Farming (Field Management) | Plots with their GPS polygon, crop campaigns and the cost ledger with the breakeven price. |
-| `crophealth` | Crop Health | Satellite monitoring (NDVI/NDWI), climate forecasts, agroclimatic alerts, pest reports, inspections and prescriptions. |
+| `crop` | Crop Health | Satellite monitoring (NDVI/NDWI), climate forecasts, agroclimatic alerts, pest reports, inspections and prescriptions. |
 | `profiles` | Profiles | Profiles, cooperatives and their members, and the assignment of agronomists to plots. |
 | `harvestcertification` | Harvest Certification | Harvest batches, quality grading and certificates with public QR traceability. |
 | `iam`, `subscriptions` | IAM, Subscriptions and Payments | Users and authentication; plans, payments and the plot quota. |
@@ -167,7 +167,7 @@ Versions follow [SemVer 2.0.0](https://semver.org/): `MAJOR.MINOR.PATCH`. Every 
   - `PascalCase`: Classes, records, interfaces and enums.
   - `camelCase`: Methods, fields and variables.
   - `UPPER_SNAKE_CASE`: Constants and enum values.
-  - Packages in lowercase without separators (`farming`, `crophealth`).
+  - Packages in lowercase without separators (`farming`, `crop`).
 - **Class names by role**:
 
   | Role | Name | Example |

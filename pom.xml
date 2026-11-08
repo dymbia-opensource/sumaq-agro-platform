@@ -97,6 +97,20 @@
 			<version>${springdoc.version}</version>
 		</dependency>
 
+		<!-- PDF documents for quality certificates -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.5</version>
+		</dependency>
+
+		<!-- QR codes for public certificate verification -->
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<version>3.5.3</version>
+		</dependency>
+
 		<!-- JPA Tests -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

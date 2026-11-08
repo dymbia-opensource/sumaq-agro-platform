@@ -68,22 +68,24 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
      * @param status                  the monitoring status
      * @param areaHectares            the area in hectares
      * @param agroMonitoringPolygonId the agromonitoring polygon id
-     *
+     * @param boundary                the polygon of the plot, may be null
      * @return the field plot with the store state
      */
     public static FieldPlot reconstitute(Long id, Long ownerUserId, String name, String region, PlotStatus status,
-                                         BigDecimal areaHectares, String agroMonitoringPolygonId) {
-        return new FieldPlot(id, ownerUserId, name, region, status, areaHectares, agroMonitoringPolygonId);
+                                         BigDecimal areaHectares, String agroMonitoringPolygonId,
+                                         PlotBoundary boundary) {
+        var fieldPlot = new FieldPlot(id, ownerUserId, name, region, status, areaHectares, agroMonitoringPolygonId);
+        fieldPlot.boundary = boundary;
+        return fieldPlot;
     }
 
     /**
      * Delineates the boundary of the field plot
      *
      * @param boundary the plot boundary
-     * @throws IllegalArgumentException if the boundary is null
+     * @throws IllegalArgumentException if the boundary is null or its area is out of range
      */
-    public void delineateBoundary(PlotBoundary boundary)
-    {
+    public void delineateBoundary(PlotBoundary boundary) {
         if (boundary == null) {
             throw new IllegalArgumentException("field.plot.error.boundary.required");
         }
@@ -93,10 +95,10 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
         }
         var previousPolygonId = this.agroMonitoringPolygonId;
         this.boundary = boundary;
-        this.areaHectares =area;
+        this.areaHectares = area;
         this.agroMonitoringPolygonId = null;
         this.status = PlotStatus.WITHOUT_POLYGON;
-        registerDomainEvent(new PlotBoundaryDelineatedEvent(id,name,boundary,previousPolygonId));
+        registerDomainEvent(new PlotBoundaryDelineatedEvent(id, name, boundary, previousPolygonId));
     }
 
     /**
@@ -104,16 +106,13 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
      *
      * @param polygonId the polygon id
      * @throws IllegalArgumentException if the polygon id is null or blank
-     * @throws IllegalStateException if the field plot does not have a boundary
+     * @throws IllegalStateException    if the field plot does not have a boundary
      */
-    public void linkPolygon(String polygonId)
-    {
-        if (polygonId == null || polygonId.isBlank())
-        {
+    public void linkPolygon(String polygonId) {
+        if (polygonId == null || polygonId.isBlank()) {
             throw new IllegalArgumentException("field.plot.error.polygonId.notBlank");
         }
-        if (!hasPolygon())
-        {
+        if (!hasPolygon()) {
             throw new IllegalStateException("field.plot.error.boundary.required");
         }
         this.agroMonitoringPolygonId = polygonId;
@@ -121,12 +120,11 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     }
 
     /**
-     * Checks if the field plot has a linked polygon
+     * Checks if the polygon of the field plot was already drawn
      *
-     * @return {@code true} if the field plot has a linked polygon, {@code false} otherwise
+     * @return {@code true} if the field plot has a boundary, {@code false} otherwise
      */
-    public boolean hasPolygon()
-    {
-        return boundary!=null;
+    public boolean hasPolygon() {
+        return boundary != null;
     }
 }

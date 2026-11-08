@@ -25,7 +25,8 @@ public final class FieldPlotPersistenceAssembler {
                 entity.getRegion(),
                 entity.getStatus(),
                 entity.getAreaHectares(),
-                entity.getAgroMonitoringPolygonId());
+                entity.getAgroMonitoringPolygonId(),
+                entity.getBoundary());
     }
 
     /**
@@ -44,6 +45,7 @@ public final class FieldPlotPersistenceAssembler {
         entity.setStatus(fieldPlot.getStatus());
         entity.setAreaHectares(fieldPlot.getAreaHectares());
         entity.setAgroMonitoringPolygonId(fieldPlot.getAgroMonitoringPolygonId());
+        entity.setBoundary(fieldPlot.getBoundary());
         return entity;
     }
 }

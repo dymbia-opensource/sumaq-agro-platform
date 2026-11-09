@@ -15,6 +15,11 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Optional;
 
+/**
+ * Implementation of the polygon monitoring service with the AgroMonitoring Polygon API.
+ *
+ * @since 1.0
+ */
 @Service
 public class AgroMonitoringPolygonService implements PolygonMonitoringService {
 

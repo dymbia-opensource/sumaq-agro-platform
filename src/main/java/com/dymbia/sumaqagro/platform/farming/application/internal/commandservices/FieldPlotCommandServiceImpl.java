@@ -3,6 +3,7 @@ package com.dymbia.sumaqagro.platform.farming.application.internal.commandservic
 import com.dymbia.sumaqagro.platform.farming.application.commandservices.FieldPlotCommandService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.DelineatePlotBoundaryCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.LinkPlotPolygonCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
@@ -42,12 +43,12 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
      */
     @Override
     public Result<Long, ApplicationError> handle(RegisterFieldPlotCommand command) {
-        if(fieldPlotRepository.existsByOwnerUserIdAndName(command.ownerUserId(), command.name())) {
+        if (fieldPlotRepository.existsByOwnerUserIdAndName(command.ownerUserId(), command.name())) {
             return Result.failure(ApplicationError.conflict("FieldPlot", DUPLICATE_NAME_REASON));
         }
         if (fieldPlotRepository.countByOwnerUserId(command.ownerUserId()) >= SEED_PLAN_PLOT_QUOTA)
-            return Result.failure(ApplicationError.businessRuleViolation(
-                    "plot-quota", "The producer reached the plot quota of the plan."));
+            return Result.failure(ApplicationError.businessRuleViolation("plot-quota", "The producer reached the plot" +
+                    " quota of the plan."));
 
         var fieldPlot = new FieldPlot(command);
         try {
@@ -75,6 +76,17 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
             return Result.failure(ApplicationError.notFound("FieldPlot", command.fieldPlotId().toString()));
         }
         fieldPlot.get().delineateBoundary(command.boundary());
+        fieldPlotRepository.save(fieldPlot.get());
+        return Result.success(command.fieldPlotId());
+    }
+
+    @Override
+    public Result<Long, ApplicationError> handle(LinkPlotPolygonCommand command) {
+        var fieldPlot = fieldPlotRepository.findById(command.fieldPlotId());
+        if (fieldPlot.isEmpty()) {
+            return Result.failure(ApplicationError.notFound("FieldPlot", command.fieldPlotId().toString()));
+        }
+        fieldPlot.get().linkPolygon(command.polygonId());
         fieldPlotRepository.save(fieldPlot.get());
         return Result.success(command.fieldPlotId());
     }

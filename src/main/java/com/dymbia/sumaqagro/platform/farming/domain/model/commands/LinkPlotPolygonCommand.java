@@ -12,14 +12,14 @@ public record LinkPlotPolygonCommand(Long fieldPlotId, String polygonId) {
     /**
      * Validates the command parameters
      *
-     * @throws IllegalArgumentException when the id or the
+     * @throws IllegalArgumentException when the id or the polygon id is invalid
      */
     public LinkPlotPolygonCommand {
         if (fieldPlotId == null || fieldPlotId <= 0) {
             throw new IllegalArgumentException("field.plot.error.id.invalid");
         }
         if (polygonId == null || polygonId.isBlank()) {
-            throw new IllegalArgumentException("polygon.error.polygonId.notBlank");
+            throw new IllegalArgumentException("field.plot.error.polygonId.notBlank");
         }
     }
 }

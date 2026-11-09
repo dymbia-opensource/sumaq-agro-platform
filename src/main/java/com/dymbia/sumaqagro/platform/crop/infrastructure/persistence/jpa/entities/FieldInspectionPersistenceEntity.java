@@ -43,6 +43,6 @@ public class FieldInspectionPersistenceEntity
     @Column(columnDefinition = "TEXT")
     private String findings;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Instant completedAt;
 }

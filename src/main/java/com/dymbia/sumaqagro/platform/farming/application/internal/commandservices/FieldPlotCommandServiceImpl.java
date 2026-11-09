@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.farming.application.internal.commandservic
 
 import com.dymbia.sumaqagro.platform.farming.application.commandservices.FieldPlotCommandService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.DelineatePlotBoundaryCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
@@ -59,5 +60,22 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
             return Result.failure(ApplicationError.unexpected("register-field-plot", exception.getMessage()));
         }
         return Result.success(fieldPlot.getId());
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * A missing plot is {@code notFound} (404). The aggregate rejects an invalid area (400).
+     * </p>
+     */
+    @Override
+    public Result<Long, ApplicationError> handle(DelineatePlotBoundaryCommand command) {
+        var fieldPlot = fieldPlotRepository.findById(command.fieldPlotId());
+        if (fieldPlot.isEmpty()) {
+            return Result.failure(ApplicationError.notFound("FieldPlot", command.fieldPlotId().toString()));
+        }
+        fieldPlot.get().delineateBoundary(command.boundary());
+        fieldPlotRepository.save(fieldPlot.get());
+        return Result.success(command.fieldPlotId());
     }
 }

@@ -1,5 +1,6 @@
 package com.dymbia.sumaqagro.platform.farming.application.commandservices;
 
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.DelineatePlotBoundaryCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
@@ -13,4 +14,12 @@ public interface FieldPlotCommandService {
      * @return the id of the new field plot, or the error that stopped the registration
      */
     Result<Long, ApplicationError> handle(RegisterFieldPlotCommand command);
+
+    /**
+     * Draws or redraws the polygon of a field plot.
+     *
+     * @param command the delineate plot boundary command
+     * @return the id of the field plot, or the error that stopped the operation
+     */
+    Result<Long, ApplicationError> handle(DelineatePlotBoundaryCommand command);
 }

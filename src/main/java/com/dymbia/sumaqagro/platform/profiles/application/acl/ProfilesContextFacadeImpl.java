@@ -3,7 +3,7 @@ package com.dymbia.sumaqagro.platform.profiles.application.acl;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.ProfilesQueryService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAgronomistAssignedToPlotQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetProfileByUserIdQuery;
-import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories.CooperativePersistenceRepository;
+import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 import org.springframework.stereotype.Service;
 
@@ -20,12 +20,12 @@ import java.util.Optional;
 public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
 
     private final ProfilesQueryService profilesQueryService;
-    private final CooperativePersistenceRepository cooperativePersistenceRepository;
+    private final CooperativeRepository cooperativeRepository;
 
     public ProfilesContextFacadeImpl(ProfilesQueryService profilesQueryService,
-                                     CooperativePersistenceRepository cooperativePersistenceRepository) {
+                                     CooperativeRepository cooperativeRepository) {
         this.profilesQueryService = profilesQueryService;
-        this.cooperativePersistenceRepository = cooperativePersistenceRepository;
+        this.cooperativeRepository = cooperativeRepository;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
             return false;
         }
 
-        return cooperativePersistenceRepository.findById(cooperativeId)
+        return cooperativeRepository.findById(cooperativeId)
                 .map(cooperative -> cooperative.getMembers().stream()
                         .anyMatch(member -> member.getDni().value().equals(dni.trim())))
                 .orElse(false);

@@ -12,6 +12,15 @@ import java.util.Optional;
 public interface ProfilesContextFacade {
 
     /**
+     * Creates the initial profile for a newly registered user.
+     *
+     * @param userId    the identifier assigned by IAM
+     * @param firstName the user's given names
+     * @param lastName  the user's family names
+     */
+    void createProfile(Long userId, String firstName, String lastName);
+
+    /**
      * Returns the user id of the agronomist currently assigned to the given plot.
      *
      * @param plotId identity of the plot

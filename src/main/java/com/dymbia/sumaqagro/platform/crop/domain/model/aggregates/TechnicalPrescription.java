@@ -1,5 +1,6 @@
 package com.dymbia.sumaqagro.platform.crop.domain.model.aggregates;
 
+import com.dymbia.sumaqagro.platform.crop.domain.exceptions.TechnicalPrescriptionAlreadyAppliedException;
 import com.dymbia.sumaqagro.platform.crop.domain.model.commands.IssueTechnicalPrescriptionCommand;
 import com.dymbia.sumaqagro.platform.crop.domain.model.valueobjects.TechnicalPrescriptionStatus;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
@@ -13,7 +14,8 @@ import java.util.Objects;
  * Aggregate root representing a technical prescription for a pest report.
  */
 @Getter
-public class TechnicalPrescription extends AbstractDomainAggregateRoot<TechnicalPrescription> {
+public class TechnicalPrescription
+        extends AbstractDomainAggregateRoot<TechnicalPrescription> {
 
     private Long id;
     private final Long pestReportId;
@@ -23,20 +25,23 @@ public class TechnicalPrescription extends AbstractDomainAggregateRoot<Technical
     private final String dosage;
     private final String instructions;
     private final LocalDate applicationDate;
+
     private TechnicalPrescriptionStatus status;
     private Instant appliedAt;
 
     /**
-     * Creates a new technical prescription with ISSUED status.
-     *
-     * @param command validated data required to issue the prescription
-     * @param plotId identifier of the plot associated with the pest report
+     * Initializes the data shared by issuance and reconstitution.
      */
-    private TechnicalPrescription(IssueTechnicalPrescriptionCommand command, Long plotId) {
+    private TechnicalPrescription(
+            IssueTechnicalPrescriptionCommand command,
+            Long plotId
+    ) {
         Objects.requireNonNull(command, "Command is required");
 
         if (plotId == null || plotId <= 0) {
-            throw new IllegalArgumentException("Plot ID must be greater than zero");
+            throw new IllegalArgumentException(
+                    "Plot ID must be greater than zero"
+            );
         }
 
         this.pestReportId = command.pestReportId();
@@ -50,13 +55,13 @@ public class TechnicalPrescription extends AbstractDomainAggregateRoot<Technical
     }
 
     /**
-     * Creates a new technical prescription with ISSUED status and validates that the application date is not in the past.
-     *
-     * @param command validated data required to issue the prescription
-     * @param plotId identifier of the plot associated with the pest report
-     * @param today current date for validation
+     * Issues a new prescription with an application date of today or later.
      */
-    public TechnicalPrescription(IssueTechnicalPrescriptionCommand command, Long plotId, LocalDate today) {
+    public TechnicalPrescription(
+            IssueTechnicalPrescriptionCommand command,
+            Long plotId,
+            LocalDate today
+    ) {
         this(command, plotId);
 
         Objects.requireNonNull(today, "Current date is required");
@@ -69,19 +74,7 @@ public class TechnicalPrescription extends AbstractDomainAggregateRoot<Technical
     }
 
     /**
-     * Reconstitutes an existing technical prescription from persistence state.
-     *
-     * @param id prescription identifier
-     * @param pestReportId associated pest report identifier
-     * @param plotId associated plot identifier
-     * @param agronomistId agronomist identifier
-     * @param product prescribed product
-     * @param dosage prescribed dosage
-     * @param instructions application instructions
-     * @param applicationDate scheduled application date
-     * @param status current prescription status
-     * @param appliedAt timestamp of when the prescription was applied (if applicable)
-     * @return the reconstituted prescription
+     * Reconstitutes a prescription from its persisted state.
      */
     public static TechnicalPrescription reconstitute(
             Long id,
@@ -94,20 +87,25 @@ public class TechnicalPrescription extends AbstractDomainAggregateRoot<Technical
             LocalDate applicationDate,
             TechnicalPrescriptionStatus status,
             Instant appliedAt
-    )
-    {
+    ) {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Technical prescription ID must be greater than zero");
+            throw new IllegalArgumentException(
+                    "Technical prescription ID must be greater than zero"
+            );
         }
 
         Objects.requireNonNull(status, "Prescription status is required");
 
         if (status == TechnicalPrescriptionStatus.APPLIED && appliedAt == null) {
-            throw new IllegalArgumentException("An applied prescription requires a confirmation timestamp");
+            throw new IllegalArgumentException(
+                    "An applied prescription requires a confirmation timestamp"
+            );
         }
 
         if (status == TechnicalPrescriptionStatus.ISSUED && appliedAt != null) {
-            throw new IllegalArgumentException("An issued prescription cannot have a confirmation timestamp");
+            throw new IllegalArgumentException(
+                    "An issued prescription cannot have a confirmation timestamp"
+            );
         }
 
         var command = new IssueTechnicalPrescriptionCommand(
@@ -128,13 +126,11 @@ public class TechnicalPrescription extends AbstractDomainAggregateRoot<Technical
     }
 
     /**
-     * Registers the application of the technical prescription, updating its status to APPLIED.
-     *
-     * @param confirmationTime timestamp of when the prescription was applied
+     * Confirms the application of an issued prescription.
      */
     public void registerApplication(Instant confirmationTime) {
-        if (status != TechnicalPrescriptionStatus.ISSUED) {
-            throw new IllegalStateException("The technical prescription has already been applied");
+        if (this.status == TechnicalPrescriptionStatus.APPLIED) {
+            throw new TechnicalPrescriptionAlreadyAppliedException(this.id);
         }
 
         this.appliedAt = Objects.requireNonNull(confirmationTime, "Confirmation timestamp is required");

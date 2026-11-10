@@ -1,9 +1,14 @@
 package com.dymbia.sumaqagro.platform.profiles.application.acl;
 
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.ProfilesQueryService;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.AgronomistAssignment;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAgronomistAssignedToPlotQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetProfileByUserIdQuery;
-import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories.CooperativePersistenceRepository;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PreferredLanguage;
+import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
+import com.dymbia.sumaqagro.platform.profiles.domain.repositories.ProfileRepository;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 import org.springframework.stereotype.Service;
 
@@ -20,12 +25,29 @@ import java.util.Optional;
 public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
 
     private final ProfilesQueryService profilesQueryService;
-    private final CooperativePersistenceRepository cooperativePersistenceRepository;
+    private final CooperativeRepository cooperativeRepository;
+    private final ProfileRepository profileRepository;
 
     public ProfilesContextFacadeImpl(ProfilesQueryService profilesQueryService,
-                                     CooperativePersistenceRepository cooperativePersistenceRepository) {
+                                     CooperativeRepository cooperativeRepository,
+                                     ProfileRepository profileRepository) {
         this.profilesQueryService = profilesQueryService;
-        this.cooperativePersistenceRepository = cooperativePersistenceRepository;
+        this.cooperativeRepository = cooperativeRepository;
+        this.profileRepository = profileRepository;
+    }
+
+    @Override
+    public void createProfile(Long userId, String firstName, String lastName) {
+        if (userId == null || userId <= 0) {
+            return;
+        }
+        if (profileRepository.existsByUserId(userId)) {
+            return;
+        }
+
+        PersonName name = new PersonName(firstName, lastName);
+        Profile profile = new Profile(userId, name, null, null, PreferredLanguage.ES);
+        profileRepository.save(profile);
     }
 
     @Override
@@ -35,7 +57,7 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
         }
 
         return profilesQueryService.handle(new GetAgronomistAssignedToPlotQuery(plotId))
-                .map(assignment -> assignment.getAgronomistUserId());
+                .map(AgronomistAssignment::getAgronomistUserId);
     }
 
     @Override
@@ -44,7 +66,7 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
             return false;
         }
 
-        return cooperativePersistenceRepository.findById(cooperativeId)
+        return cooperativeRepository.findById(cooperativeId)
                 .map(cooperative -> cooperative.getMembers().stream()
                         .anyMatch(member -> member.getDni().value().equals(dni.trim())))
                 .orElse(false);

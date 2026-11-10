@@ -4,6 +4,7 @@ import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.assemblers.FieldPlotPersistenceAssembler;
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.repositories.FieldPlotPersistenceRepository;
+import com.dymbia.sumaqagro.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,9 +17,18 @@ import java.util.Optional;
 @Repository
 public class FieldPlotRepositoryImpl implements FieldPlotRepository {
     private final FieldPlotPersistenceRepository fieldPlotPersistenceRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
-    public FieldPlotRepositoryImpl(FieldPlotPersistenceRepository fieldPlotPersistenceRepository) {
+    /**
+     * Constructor for the field plot repository implementation.
+     *
+     * @param fieldPlotPersistenceRepository the JPA repository for field plots
+     * @param domainEventPublisher           the domain event publisher
+     */
+    public FieldPlotRepositoryImpl(FieldPlotPersistenceRepository fieldPlotPersistenceRepository,
+                                   DomainEventPublisher domainEventPublisher) {
         this.fieldPlotPersistenceRepository = fieldPlotPersistenceRepository;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -42,12 +52,20 @@ public class FieldPlotRepositoryImpl implements FieldPlotRepository {
         return fieldPlotPersistenceRepository.existsByOwnerUserIdAndName(ownerUserId, name);
     }
 
+    /**
+     * Saves a field plot.
+     *
+     * @param fieldPlot the plot to save
+     * @return the saved plot the saved plot
+     */
     @Override
     public FieldPlot save(FieldPlot fieldPlot) {
         // saveAndFlush runs the INSERT now, so a violated unique constraint fails here
         var savedEntity = fieldPlotPersistenceRepository.saveAndFlush(FieldPlotPersistenceAssembler.
                 toPersistenceFromDomain(fieldPlot));
+        var saveFieldPlot = FieldPlotPersistenceAssembler.toDomainFromPersistence(savedEntity);
+        domainEventPublisher.publishAndClearEvents(fieldPlot);
 
-        return FieldPlotPersistenceAssembler.toDomainFromPersistence(savedEntity);
+        return saveFieldPlot;
     }
 }

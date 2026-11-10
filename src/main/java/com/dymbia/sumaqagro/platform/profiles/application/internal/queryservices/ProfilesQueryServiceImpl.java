@@ -6,37 +6,42 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAgronomistAssignedToPlotQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAgronomistAssignmentsByCooperativeQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetProfileByUserIdQuery;
-import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories.AgronomistAssignmentPersistenceRepository;
-import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories.ProfilePersistenceRepository;
+import com.dymbia.sumaqagro.platform.profiles.domain.repositories.AgronomistAssignmentRepository;
+import com.dymbia.sumaqagro.platform.profiles.domain.repositories.ProfileRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Implementation of ProfilesQueryService.
+ *
+ * @since 1.0
+ */
 @Service
 public class ProfilesQueryServiceImpl implements ProfilesQueryService {
 
-    private final ProfilePersistenceRepository profilePersistenceRepository;
-    private final AgronomistAssignmentPersistenceRepository agronomistAssignmentPersistenceRepository;
+    private final ProfileRepository profileRepository;
+    private final AgronomistAssignmentRepository agronomistAssignmentRepository;
 
-    public ProfilesQueryServiceImpl(ProfilePersistenceRepository profilePersistenceRepository,
-                                    AgronomistAssignmentPersistenceRepository agronomistAssignmentPersistenceRepository) {
-        this.profilePersistenceRepository = profilePersistenceRepository;
-        this.agronomistAssignmentPersistenceRepository = agronomistAssignmentPersistenceRepository;
+    public ProfilesQueryServiceImpl(ProfileRepository profileRepository,
+                                    AgronomistAssignmentRepository agronomistAssignmentRepository) {
+        this.profileRepository = profileRepository;
+        this.agronomistAssignmentRepository = agronomistAssignmentRepository;
     }
 
     @Override
     public Optional<Profile> handle(GetProfileByUserIdQuery query) {
-        return profilePersistenceRepository.findByUserId(query.userId());
+        return profileRepository.findByUserId(query.userId());
     }
 
     @Override
     public Optional<AgronomistAssignment> handle(GetAgronomistAssignedToPlotQuery query) {
-        return agronomistAssignmentPersistenceRepository.findByPlotIdAndActiveTrue(query.plotId());
+        return agronomistAssignmentRepository.findActiveByPlotId(query.plotId());
     }
 
     @Override
     public List<AgronomistAssignment> handle(GetAgronomistAssignmentsByCooperativeQuery query) {
-        return agronomistAssignmentPersistenceRepository.findAllByCooperativeId(query.cooperativeId());
+        return agronomistAssignmentRepository.findAllByCooperativeId(query.cooperativeId());
     }
 }

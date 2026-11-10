@@ -19,6 +19,7 @@ public class FieldPlotQueryServiceImpl implements FieldPlotQueryService {
     public FieldPlotQueryServiceImpl(FieldPlotRepository fieldPlotRepository) {
         this.fieldPlotRepository = fieldPlotRepository;
     }
+
     @Override
     public Optional<FieldPlot> handle(GetFieldPlotByIdQuery query) {
         return fieldPlotRepository.findById(query.fieldPlotId());

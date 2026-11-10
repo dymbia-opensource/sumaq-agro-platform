@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.entities;
 
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotBoundary;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotStatus;
+import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.converters.PlotBoundaryAttributeConverter;
 import com.dymbia.sumaqagro.platform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -13,11 +15,8 @@ import java.math.BigDecimal;
  * JPA persistence entity for field plots.
  */
 @Entity
-@Table(name = "field_plots", uniqueConstraints = {
-        @UniqueConstraint(
-                name = FieldPlotPersistenceEntity.OWNER_USER_ID_NAME_UNIQUE_CONSTRAINT,
-                columnNames = {"owner_user_id", "name"})
-})
+@Table(name = "field_plots", uniqueConstraints = {@UniqueConstraint(name =
+        FieldPlotPersistenceEntity.OWNER_USER_ID_NAME_UNIQUE_CONSTRAINT, columnNames = {"owner_user_id", "name"})})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,4 +41,8 @@ public class FieldPlotPersistenceEntity extends AuditableAbstractPersistenceEnti
 
     @Column(name = "agro_monitoring_polygon_id")
     private String agroMonitoringPolygonId;
+
+    @Convert(converter = PlotBoundaryAttributeConverter.class)
+    @Column(name = "boundary", columnDefinition = "TEXT")
+    private PlotBoundary boundary;
 }

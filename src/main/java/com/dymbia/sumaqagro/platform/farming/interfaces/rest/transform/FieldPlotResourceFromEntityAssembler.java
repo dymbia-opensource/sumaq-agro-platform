@@ -2,7 +2,9 @@ package com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.FieldPlotResource;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.GeoCoordinateResource;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -22,6 +24,9 @@ public final class FieldPlotResourceFromEntityAssembler {
                 entity.getRegion(),
                 entity.getStatus().name(),
                 entity.getAreaHectares(),
-                entity.getAgroMonitoringPolygonId());
+                entity.getAgroMonitoringPolygonId(),
+                entity.getBoundary()==null? List.of():
+                        entity.getBoundary().vertices().stream().map(vertex->new GeoCoordinateResource(vertex.latitude(),
+                                vertex.longitude())).toList());
     }
 }

@@ -1,33 +1,38 @@
 package com.dymbia.sumaqagro.platform.profiles.interfaces.acl;
 
-import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PreferredLanguage;
-import com.dymbia.sumaqagro.platform.profiles.domain.repositories.ProfileRepository;
-import org.springframework.stereotype.Component;
+import java.util.Optional;
 
 /**
- * Exposes profile creation to other bounded contexts.
+ * ACL facade that exposes Profiles bounded context capabilities to other contexts.
+ * Other bounded contexts must depend only on this interface, never on internal
+ * Profiles models or repositories.
+ *
+ * @since 1.0
  */
-@Component
-public class ProfilesContextFacade {
-
-    private final ProfileRepository profileRepository;
-
-    public ProfilesContextFacade(ProfileRepository profileRepository) {
-        this.profileRepository = profileRepository;
-    }
+public interface ProfilesContextFacade {
 
     /**
-     * Creates the initial profile for a newly registered user.
+     * Returns the user id of the agronomist currently assigned to the given plot.
      *
-     * @param userId the identifier assigned by IAM
-     * @param firstName the user's given names
-     * @param lastName the user's family names
+     * @param plotId identity of the plot
+     * @return Optional containing the agronomist user id if an active assignment exists
      */
-    public void createProfile(Long userId, String firstName, String lastName) {
-        var name = new PersonName(firstName, lastName);
-        var profile = new Profile(userId, name, null, null, PreferredLanguage.ES);
-        profileRepository.save(profile);
-    }
+    Optional<Long> fetchAgronomistUserIdByPlotId(Long plotId);
+
+    /**
+     * Checks whether a member (identified by DNI) belongs to the given cooperative.
+     *
+     * @param cooperativeId identity of the cooperative
+     * @param dni           DNI of the member
+     * @return true if the member belongs to the cooperative
+     */
+    boolean isMemberOfCooperative(Long cooperativeId, String dni);
+
+    /**
+     * Returns the profile phone number of a user (useful for notifications).
+     *
+     * @param userId identity of the user
+     * @return Optional containing the phone number if the profile exists and has one
+     */
+    Optional<String> fetchPhoneNumberByUserId(Long userId);
 }

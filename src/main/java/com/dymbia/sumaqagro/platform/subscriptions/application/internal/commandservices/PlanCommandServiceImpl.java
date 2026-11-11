@@ -26,9 +26,9 @@ public class PlanCommandServiceImpl implements PlanCommandService {
                     new BigDecimal("89.00"), new BigDecimal("890.00"), 0, 0, 20)
     );
 
-    private final PlanRepository planRepository;
+private final PlanRepository planRepository;
 
-    public PlanCommandServiceImpl(PlanRepository planRepository) {
+public PlanCommandServiceImpl(PlanRepository planRepository) {
         this.planRepository = planRepository;
     }
 

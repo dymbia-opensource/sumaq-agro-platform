@@ -15,4 +15,7 @@ public interface SubscriptionRepository {
      */
     Optional<Subscription> findByUserId(long userId);
 
+    /** Persists a subscription and returns it with its assigned identity. */
+    Subscription save(Subscription subscription);
+
 }

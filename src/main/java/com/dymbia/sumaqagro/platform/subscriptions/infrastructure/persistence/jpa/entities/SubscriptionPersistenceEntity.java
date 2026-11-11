@@ -44,4 +44,16 @@ public class SubscriptionPersistenceEntity extends AuditableAbstractPersistenceE
 
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
+
+    public SubscriptionPersistenceEntity(
+            long userId, PlanCode planCode, BillingCycle billingCycle,
+            SubscriptionStatus status, LocalDate startDate, LocalDate endDate
+    ) {
+        this.userId = userId;
+        this.planCode = planCode;
+        this.billingCycle = billingCycle;
+        this.status = status;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
 }

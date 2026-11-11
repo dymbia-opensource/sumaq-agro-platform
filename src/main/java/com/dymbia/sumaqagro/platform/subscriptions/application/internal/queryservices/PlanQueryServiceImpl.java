@@ -12,9 +12,9 @@ import java.util.List;
 @Service
 public class PlanQueryServiceImpl implements PlanQueryService {
 
-    private final PlanRepository planRepository;
+private final PlanRepository planRepository;
 
-    public PlanQueryServiceImpl(PlanRepository planRepository) {
+public PlanQueryServiceImpl(PlanRepository planRepository) {
         this.planRepository = planRepository;
     }
 

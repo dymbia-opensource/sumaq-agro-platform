@@ -12,6 +12,13 @@ import java.util.Optional;
 @Repository
 public class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
+    @Override
+    public Subscription save(Subscription subscription) {
+        var saved = persistenceRepository.save(
+                SubscriptionPersistenceAssembler.toPersistenceFromDomain(subscription));
+        return SubscriptionPersistenceAssembler.toDomainFromPersistence(saved);
+    }
+
     private final SubscriptionPersistenceRepository persistenceRepository;
 
     public SubscriptionRepositoryImpl(SubscriptionPersistenceRepository persistenceRepository) {

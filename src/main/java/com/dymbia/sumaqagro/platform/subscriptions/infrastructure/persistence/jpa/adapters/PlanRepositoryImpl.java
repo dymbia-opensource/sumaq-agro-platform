@@ -2,16 +2,23 @@ package com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.j
 
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.entities.Plan;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.valueobjects.PlanCode;
-import com.dymbia.sumaqagro.platform.subscriptions.domain.repositories.PlanRepository;
 import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jpa.assemblers.PlanPersistenceAssembler;
 import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jpa.repositories.PlanPersistenceRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+import com.dymbia.sumaqagro.platform.subscriptions.domain.repositories.PlanRepository;
 
 /** Bridges the plan repository port and Spring Data JPA. */
 @Repository
 public class PlanRepositoryImpl implements PlanRepository {
+
+    @Override
+    public Optional<Plan> findByCode(PlanCode code) {
+        return planPersistenceRepository.findByCode(code)
+                .map(PlanPersistenceAssembler::toDomainFromPersistence);
+    }
 
     private final PlanPersistenceRepository planPersistenceRepository;
 

@@ -7,6 +7,17 @@ import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jp
 /** Maps a persisted subscription back to its domain aggregate. */
 public final class SubscriptionPersistenceAssembler {
 
+    /** Maps the aggregate to its JPA representation. */
+    public static SubscriptionPersistenceEntity toPersistenceFromDomain(Subscription subscription) {
+        var entity = new SubscriptionPersistenceEntity(
+                subscription.getUserId(), subscription.getPlanCode(), subscription.getBillingCycle(),
+                subscription.getStatus(), subscription.getPeriod().startDate(),
+                subscription.getPeriod().endDate()
+        );
+        entity.setId(subscription.getId());
+        return entity;
+    }
+
     private SubscriptionPersistenceAssembler() {
     }
 

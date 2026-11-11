@@ -4,6 +4,7 @@ import com.dymbia.sumaqagro.platform.subscriptions.domain.model.entities.Plan;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.valueobjects.PlanCode;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for subscription catalog plans.
@@ -20,8 +21,12 @@ public interface PlanRepository {
      * Returns the plans in the suscription catalog
      */
     List<Plan> findAll();
+
+
     /**
      * Inserts a new plan into the repository.
      * */
     void insert(Plan plan);
+
+    Optional<Plan> findByCode(PlanCode code);
 }

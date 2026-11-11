@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.certification.domain.model.commands;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 
 import java.time.Instant;
 import java.util.regex.Pattern;
@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 public record IssueQualityCertificateCommand(
         String certificateNumber,
         Long harvestBatchId,
-        HarvestBatch.QualityCategory qualityCategory,
+        QualityCategory qualityCategory,
         String certificateHash,
         Long issuedByUserId,
         Instant issuedAt

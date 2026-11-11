@@ -1,6 +1,7 @@
 package com.dymbia.sumaqagro.platform.certification.domain.model.aggregates;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch.QualityCategory;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CertificateStatus;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
@@ -118,13 +119,5 @@ public class QualityCertificate extends AbstractDomainAggregateRoot<QualityCerti
             throw new IllegalArgumentException("Certificate hash must contain exactly 64 hexadecimal characters");
         }
         return hash.trim().toLowerCase(Locale.ROOT);
-    }
-
-    /**
-     * Lifecycle of a quality certificate.
-     */
-    public enum CertificateStatus {
-        ACTIVE,
-        REVOKED
     }
 }

@@ -6,6 +6,9 @@ import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.Quali
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetHarvestBatchByIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByNumberQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByPublicHashQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CertificateStatus;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -55,11 +58,11 @@ public interface HarvestCertificationQueryService {
      */
     record PublicTraceability(
             String certificateNumber,
-            QualityCertificate.CertificateStatus status,
+            CertificateStatus status,
             boolean authentic,
             String batchCode,
-            HarvestBatch.CropType cropType,
-            HarvestBatch.QualityCategory qualityCategory,
+            CropType cropType,
+            QualityCategory qualityCategory,
             BigDecimal qualityScore,
             ExternalFieldManagementService.FieldOrigin origin
     ) {

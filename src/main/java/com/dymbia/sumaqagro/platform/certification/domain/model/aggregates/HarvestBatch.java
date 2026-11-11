@@ -2,6 +2,12 @@ package com.dymbia.sumaqagro.platform.certification.domain.model.aggregates;
 
 import com.dymbia.sumaqagro.platform.certification.domain.model.events.BatchGradedEvent;
 import com.dymbia.sumaqagro.platform.certification.domain.model.events.DeliveredBatchWeighedEvent;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.BatchStatus;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CoffeeCuppingScores;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.Percentage;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.PotatoCaliberDistribution;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
@@ -24,7 +30,6 @@ import java.util.Objects;
 @Getter
 public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
 
-    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
     private static final BigDecimal PEST_DAMAGE_THRESHOLD = BigDecimal.valueOf(15);
     private static final BigDecimal SPECIALTY_THRESHOLD = BigDecimal.valueOf(80);
     private static final BigDecimal MINIMUM_COFFEE_SAMPLE_KG = BigDecimal.ONE;
@@ -174,23 +179,16 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
     /**
      * Records the potato calibers and closes the pending qualification.
      */
-    public void gradePotato(BigDecimal firstPercentage, BigDecimal secondPercentage, BigDecimal thirdPercentage,
-                            BigDecimal pestDamagePercentage) {
+    public void gradePotato(PotatoCaliberDistribution distribution) {
         requireReadyForGrading();
         if (cropType != CropType.ANDEAN_POTATO) {
             throw new IllegalStateException("Potato calibers can only be recorded for potato batches");
         }
-        requirePercentage(firstPercentage, "First-caliber percentage");
-        requirePercentage(secondPercentage, "Second-caliber percentage");
-        requirePercentage(thirdPercentage, "Third-caliber percentage");
-        requirePercentage(pestDamagePercentage, "Pest-damage percentage");
-        if (firstPercentage.add(secondPercentage).add(thirdPercentage).compareTo(ONE_HUNDRED) != 0) {
-            throw new IllegalArgumentException("Potato caliber percentages must add up to 100");
-        }
-        this.firstCaliberPercentage = firstPercentage;
-        this.secondCaliberPercentage = secondPercentage;
-        this.thirdCaliberPercentage = thirdPercentage;
-        this.pestDamagePercentage = pestDamagePercentage;
+        Objects.requireNonNull(distribution, "Potato caliber distribution is required");
+        this.firstCaliberPercentage = distribution.firstPercentage().value();
+        this.secondCaliberPercentage = distribution.secondPercentage().value();
+        this.thirdCaliberPercentage = distribution.thirdPercentage().value();
+        this.pestDamagePercentage = distribution.pestDamagePercentage().value();
         this.status = BatchStatus.GRADED;
         registerDomainEvent(new BatchGradedEvent(id, cropType));
     }
@@ -198,18 +196,13 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
     /**
      * Records the coffee cupping and closes the pending qualification.
      */
-    public void cupCoffee(BigDecimal aroma, BigDecimal flavor, BigDecimal acidity, BigDecimal body,
-                          BigDecimal totalScore, boolean fermentDefect) {
+    public void cupCoffee(CoffeeCuppingScores scores, boolean fermentDefect) {
         requireReadyForGrading();
         if (cropType != CropType.SPECIALTY_COFFEE) {
             throw new IllegalStateException("Coffee cupping can only be recorded for coffee batches");
         }
-        requirePercentage(aroma, "Aroma");
-        requirePercentage(flavor, "Flavor");
-        requirePercentage(acidity, "Acidity");
-        requirePercentage(body, "Body");
-        requirePercentage(totalScore, "Total cupping score");
-        this.coffeeCuppingScore = totalScore;
+        Objects.requireNonNull(scores, "Coffee cupping scores are required");
+        this.coffeeCuppingScore = scores.totalScore().value();
         this.coffeeFermentDefect = fermentDefect;
         this.status = BatchStatus.GRADED;
         registerDomainEvent(new BatchGradedEvent(id, cropType));
@@ -226,14 +219,14 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
         if (qualityCategory != null) {
             throw new IllegalStateException("The quality score is already assigned");
         }
-        requirePercentage(score, "Quality score");
+        Percentage validatedScore = new Percentage(score);
         Objects.requireNonNull(category, "Quality category is required");
         if (cropType == CropType.ANDEAN_POTATO) {
             requirePotatoCategory(category);
         } else if (coffeeCuppingScore == null || category != coffeeCategory()) {
             throw new IllegalArgumentException("The quality category does not match the coffee cupping result");
         }
-        this.qualityScore = score;
+        this.qualityScore = validatedScore.value();
         this.qualityCategory = category;
     }
 
@@ -292,51 +285,4 @@ public class HarvestBatch extends AbstractDomainAggregateRoot<HarvestBatch> {
         return value;
     }
 
-    private static void requirePercentage(BigDecimal value, String label) {
-        if (value == null || value.signum() < 0 || value.compareTo(ONE_HUNDRED) > 0) {
-            throw new IllegalArgumentException(label + " must be between 0 and 100");
-        }
-    }
-
-    /**
-     * Crop evaluated in this bounded context.
-     */
-    public enum CropType {
-        ANDEAN_POTATO,
-        SPECIALTY_COFFEE
-    }
-
-    /**
-     * Lifecycle of a harvest batch.
-     */
-    public enum BatchStatus {
-        PENDING,
-        GRADED,
-        CERTIFIED
-    }
-
-    /**
-     * Commercial quality result of a graded harvest batch.
-     */
-    public enum QualityCategory {
-        PREMIUM_GOLD,
-        STANDARD,
-        B_GRADE_REQUIRES_SORTING,
-        SPECIALTY_COFFEE,
-        COMMERCIAL_COFFEE;
-
-        /**
-         * @return {@code true} when the category applies to potato
-         */
-        public boolean isPotatoCategory() {
-            return this == PREMIUM_GOLD || this == STANDARD || this == B_GRADE_REQUIRES_SORTING;
-        }
-
-        /**
-         * @return {@code true} when the category applies to coffee
-         */
-        public boolean isCoffeeCategory() {
-            return this == SPECIALTY_COFFEE || this == COMMERCIAL_COFFEE;
-        }
-    }
 }

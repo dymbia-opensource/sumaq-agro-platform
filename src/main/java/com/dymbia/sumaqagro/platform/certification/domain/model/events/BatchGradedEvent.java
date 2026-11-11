@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.certification.domain.model.events;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
 
 /**
  * Domain event raised when potato grading or coffee cupping finishes.
@@ -10,5 +10,5 @@ import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.Harve
  * @param cropType       crop that was graded
  * @since 1.0
  */
-public record BatchGradedEvent(Long harvestBatchId, HarvestBatch.CropType cropType) {
+public record BatchGradedEvent(Long harvestBatchId, CropType cropType) {
 }

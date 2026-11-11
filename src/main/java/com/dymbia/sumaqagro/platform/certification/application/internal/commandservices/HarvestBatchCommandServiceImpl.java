@@ -8,6 +8,8 @@ import com.dymbia.sumaqagro.platform.certification.domain.model.commands.Extract
 import com.dymbia.sumaqagro.platform.certification.domain.model.commands.GradePotatoCalibersCommand;
 import com.dymbia.sumaqagro.platform.certification.domain.model.commands.RegisterHarvestBatchCommand;
 import com.dymbia.sumaqagro.platform.certification.domain.model.commands.WeighHarvestBatchCommand;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CoffeeCuppingScores;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.PotatoCaliberDistribution;
 import com.dymbia.sumaqagro.platform.certification.domain.repositories.HarvestBatchRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
@@ -77,23 +79,15 @@ public class HarvestBatchCommandServiceImpl implements HarvestBatchCommandServic
     @Override
     @Transactional
     public Result<HarvestBatch, ApplicationError> handle(GradePotatoCalibersCommand command) {
-        return update(command.harvestBatchId(), batch -> batch.gradePotato(
-                command.firstPercentage(),
-                command.secondPercentage(),
-                command.thirdPercentage(),
-                command.pestDamagePercentage()));
+        PotatoCaliberDistribution distribution = command.distribution();
+        return update(command.harvestBatchId(), batch -> batch.gradePotato(distribution));
     }
 
     @Override
     @Transactional
     public Result<HarvestBatch, ApplicationError> handle(CupCoffeeCommand command) {
-        return update(command.harvestBatchId(), batch -> batch.cupCoffee(
-                command.aroma(),
-                command.flavor(),
-                command.acidity(),
-                command.body(),
-                command.totalScore(),
-                command.fermentDefect()));
+        CoffeeCuppingScores scores = command.scores();
+        return update(command.harvestBatchId(), batch -> batch.cupCoffee(scores, command.fermentDefect()));
     }
 
     private Result<HarvestBatch, ApplicationError> update(Long harvestBatchId, Consumer<HarvestBatch> action) {

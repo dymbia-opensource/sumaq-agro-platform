@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.certification.domain.model.commands;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
 
 import java.time.LocalDate;
 
@@ -20,7 +20,7 @@ public record RegisterHarvestBatchCommand(
         Long cooperativeId,
         Long memberId,
         Long plotId,
-        HarvestBatch.CropType cropType,
+        CropType cropType,
         LocalDate harvestedOn
 ) {
     public RegisterHarvestBatchCommand {

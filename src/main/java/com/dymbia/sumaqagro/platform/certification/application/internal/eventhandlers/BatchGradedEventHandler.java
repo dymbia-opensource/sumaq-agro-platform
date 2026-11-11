@@ -3,6 +3,9 @@ package com.dymbia.sumaqagro.platform.certification.application.internal.eventha
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.events.BatchGradedEvent;
 import com.dymbia.sumaqagro.platform.certification.domain.repositories.HarvestBatchRepository;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.BatchStatus;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -41,10 +44,10 @@ public class BatchGradedEventHandler {
     }
 
     private void assignQualityScore(HarvestBatch batch) {
-        if (batch.getQualityCategory() != null || batch.getStatus() != HarvestBatch.BatchStatus.GRADED) {
+        if (batch.getQualityCategory() != null || batch.getStatus() != BatchStatus.GRADED) {
             return;
         }
-        if (batch.getCropType() == HarvestBatch.CropType.ANDEAN_POTATO) {
+        if (batch.getCropType() == CropType.ANDEAN_POTATO) {
             batch.assignQualityScore(batch.getFirstCaliberPercentage(), potatoCategory(batch));
         } else {
             batch.assignQualityScore(batch.getCoffeeCuppingScore(), coffeeCategory(batch));
@@ -52,21 +55,21 @@ public class BatchGradedEventHandler {
         harvestBatchRepository.save(batch);
     }
 
-    private static HarvestBatch.QualityCategory potatoCategory(HarvestBatch batch) {
+    private static QualityCategory potatoCategory(HarvestBatch batch) {
         if (batch.getPestDamagePercentage().compareTo(PEST_DAMAGE_THRESHOLD) > 0) {
-            return HarvestBatch.QualityCategory.B_GRADE_REQUIRES_SORTING;
+            return QualityCategory.B_GRADE_REQUIRES_SORTING;
         }
         if (batch.getFirstCaliberPercentage().compareTo(PREMIUM_FIRST_CALIBER) >= 0) {
-            return HarvestBatch.QualityCategory.PREMIUM_GOLD;
+            return QualityCategory.PREMIUM_GOLD;
         }
-        return HarvestBatch.QualityCategory.STANDARD;
+        return QualityCategory.STANDARD;
     }
 
-    private static HarvestBatch.QualityCategory coffeeCategory(HarvestBatch batch) {
+    private static QualityCategory coffeeCategory(HarvestBatch batch) {
         boolean specialty = !batch.isCoffeeFermentDefect()
                 && batch.getCoffeeCuppingScore().compareTo(SPECIALTY_THRESHOLD) >= 0;
         return specialty
-                ? HarvestBatch.QualityCategory.SPECIALTY_COFFEE
-                : HarvestBatch.QualityCategory.COMMERCIAL_COFFEE;
+                ? QualityCategory.SPECIALTY_COFFEE
+                : QualityCategory.COMMERCIAL_COFFEE;
     }
 }

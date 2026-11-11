@@ -1,7 +1,7 @@
 package com.dymbia.sumaqagro.platform.certification.interfaces.rest.transform;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.commands.IssueQualityCertificateCommand;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 import com.dymbia.sumaqagro.platform.certification.interfaces.rest.resources.IssueQualityCertificateResource;
 
 import java.time.Instant;
@@ -14,7 +14,7 @@ public final class IssueQualityCertificateCommandFromResourceAssembler {
 
     public static IssueQualityCertificateCommand toCommandFromResource(
             IssueQualityCertificateResource resource,
-            HarvestBatch.QualityCategory qualityCategory,
+            QualityCategory qualityCategory,
             String certificateHash,
             Instant issuedAt) {
         Objects.requireNonNull(resource, "Issue quality certificate request body is required.");

@@ -1,7 +1,7 @@
 package com.dymbia.sumaqagro.platform.certification.interfaces.rest.transform;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.commands.RegisterHarvestBatchCommand;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
 import com.dymbia.sumaqagro.platform.certification.interfaces.rest.resources.RegisterHarvestBatchResource;
 
 import java.util.Objects;
@@ -21,7 +21,7 @@ public final class RegisterHarvestBatchCommandFromResourceAssembler {
                 resource.cooperativeId(),
                 resource.memberId(),
                 resource.plotId(),
-                HarvestBatch.CropType.valueOf(resource.cropType()),
+                CropType.valueOf(resource.cropType()),
                 resource.harvestedOn());
     }
 }

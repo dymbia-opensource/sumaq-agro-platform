@@ -1,8 +1,8 @@
 package com.dymbia.sumaqagro.platform.certification.infrastructure.persistence.jpa.entities;
 
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch.BatchStatus;
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch.CropType;
-import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch.QualityCategory;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.BatchStatus;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CropType;
+import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 import com.dymbia.sumaqagro.platform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

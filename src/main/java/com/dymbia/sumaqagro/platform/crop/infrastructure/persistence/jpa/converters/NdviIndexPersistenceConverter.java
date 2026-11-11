@@ -8,7 +8,7 @@ import jakarta.persistence.Converter;
  * Converts NDVI value objects to database values and vice versa.
  */
 @Converter
-public class NdviIndexAttributeConverter implements AttributeConverter<NdviIndex, Double> {
+public class NdviIndexPersistenceConverter implements AttributeConverter<NdviIndex, Double> {
 
     @Override
     public Double convertToDatabaseColumn(NdviIndex attribute) {

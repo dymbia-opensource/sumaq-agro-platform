@@ -9,7 +9,7 @@ import jakarta.persistence.Converter;
  */
 
 @Converter
-public class NdwiIndexAttributeConverter implements AttributeConverter<NdwiIndex, Double> {
+public class NdwiIndexPersistenceConverter implements AttributeConverter<NdwiIndex, Double> {
 
     @Override
     public Double convertToDatabaseColumn(NdwiIndex attribute) {

@@ -1,0 +1,39 @@
+package com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest;
+
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
+import com.dymbia.sumaqagro.platform.subscriptions.application.queryservices.SubscriptionQueryService;
+import com.dymbia.sumaqagro.platform.subscriptions.domain.model.queries.GetSubscriptionByUserIdQuery;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.resources.SubscriptionResource;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.transform.SubscriptionResourceFromEntityAssembler;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Exposes subscription operations for the authenticated account.
+ */
+@RestController
+@RequestMapping("/api/v1/subscriptions")
+public class SubscriptionsController {
+
+    private final SubscriptionQueryService subscriptionQueryService;
+
+    public SubscriptionsController(SubscriptionQueryService subscriptionQueryService) {
+        this.subscriptionQueryService = subscriptionQueryService;
+    }
+
+    /**
+     * Returns the caller's subscription, or 204 if no subscription exists.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<SubscriptionResource> getMySubscription(
+            @AuthenticationPrincipal UserDetailsImpl principal
+    ) {
+        return subscriptionQueryService.handle(new GetSubscriptionByUserIdQuery(principal.getId()))
+                .map(SubscriptionResourceFromEntityAssembler::toResourceFromEntity)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+}

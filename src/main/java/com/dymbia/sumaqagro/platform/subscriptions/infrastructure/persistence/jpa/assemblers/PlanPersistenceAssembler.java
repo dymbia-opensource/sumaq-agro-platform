@@ -20,4 +20,16 @@ public final class PlanPersistenceAssembler {
                 plan.getSupervisedPlotLimit()
         );
     }
+
+    /** Restores a domain plan from its persisted catalog record. */
+    public static Plan toDomainFromPersistence(PlanPersistenceEntity entity) {
+        return new Plan(
+                entity.getCode(),
+                entity.getMonthlyPrice(),
+                entity.getAnnualPrice(),
+                entity.getRegisteredPlotLimit(),
+                entity.getProducerLimit(),
+                entity.getSupervisedPlotLimit()
+        );
+    }
 }

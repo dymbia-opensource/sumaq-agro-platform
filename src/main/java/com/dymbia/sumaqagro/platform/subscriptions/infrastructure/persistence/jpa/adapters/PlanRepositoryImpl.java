@@ -7,6 +7,8 @@ import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jp
 import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jpa.repositories.PlanPersistenceRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /** Bridges the plan repository port and Spring Data JPA. */
 @Repository
 public class PlanRepositoryImpl implements PlanRepository {
@@ -17,13 +19,30 @@ public class PlanRepositoryImpl implements PlanRepository {
         this.planPersistenceRepository = planPersistenceRepository;
     }
 
+
+    /**
+     * Requests all plans in the subscription catalog.
+     */
     @Override
     public boolean existsByCode(PlanCode code) {
         return planPersistenceRepository.existsByCode(code);
     }
 
+    /**
+     * Inserts a new plan into the repository.
+     */
     @Override
     public void insert(Plan plan) {
         planPersistenceRepository.save(PlanPersistenceAssembler.toPersistenceFromDomain(plan));
+    }
+
+    /**
+     * Returns all plans in the subscription catalog.
+     */
+    @Override
+    public List<Plan> findAll() {
+        return planPersistenceRepository.findAll().stream()
+                .map(PlanPersistenceAssembler::toDomainFromPersistence)
+                .toList();
     }
 }

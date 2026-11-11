@@ -2,14 +2,19 @@ package com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest;
 
 import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import com.dymbia.sumaqagro.platform.subscriptions.application.queryservices.SubscriptionQueryService;
+import com.dymbia.sumaqagro.platform.subscriptions.domain.model.queries.GetPaymentsByUserIdQuery;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.queries.GetSubscriptionByUserIdQuery;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.resources.PaymentResource;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.resources.SubscriptionResource;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.transform.PaymentResourceFromEntityAssembler;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.transform.SubscriptionResourceFromEntityAssembler;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * Exposes subscription operations for the authenticated account.
@@ -35,5 +40,14 @@ public class SubscriptionsController {
                 .map(SubscriptionResourceFromEntityAssembler::toResourceFromEntity)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    /** Returns the authenticated account's checkout history, newest first. */
+    @GetMapping("/me/payments")
+    public List<PaymentResource> getMyPayments(@AuthenticationPrincipal UserDetailsImpl principal) {
+        return subscriptionQueryService.handle(new GetPaymentsByUserIdQuery(principal.getId()))
+                .stream()
+                .map(PaymentResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
     }
 }

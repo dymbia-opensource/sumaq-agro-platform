@@ -6,6 +6,8 @@ import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jp
 import com.dymbia.sumaqagro.platform.subscriptions.infrastructure.persistence.jpa.repositories.PaymentPersistenceRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /** Persists checkout attempts using Spring Data JPA. */
 @Repository
 public class PaymentRepositoryImpl implements PaymentRepository {
@@ -18,5 +20,13 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     @Override
     public void insert(Payment payment) {
         persistenceRepository.save(PaymentPersistenceAssembler.toPersistenceFromDomain(payment));
+    }
+
+    @Override
+    public List<Payment> findByUserId(long userId) {
+        return persistenceRepository.findByUserIdOrderByAttemptedAtDescIdDesc(userId)
+                .stream()
+                .map(PaymentPersistenceAssembler::toDomainFromPersistence)
+                .toList();
     }
 }

@@ -15,4 +15,22 @@ public final class PaymentPersistenceAssembler {
                 payment.status(), payment.attemptedAt()
         );
     }
+
+    /**
+     * Restores a payment attempt using the amount recorded at checkout.
+     */
+    public static Payment toDomainFromPersistence(PaymentPersistenceEntity entity) {
+        return new Payment(
+                entity.getReference(),
+                entity.getUserId(),
+                entity.getSubscriptionId(),
+                entity.getPlanCode(),
+                entity.getBillingCycle(),
+                entity.getAmount(),
+                entity.getStatus(),
+                entity.getAttemptedAt()
+        );
+    }
+
+
 }

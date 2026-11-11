@@ -9,7 +9,7 @@ import jakarta.persistence.Converter;
  */
 
 @Converter
-public class PercentageAttributeConverter implements AttributeConverter<Percentage, Double> {
+public class PercentagePersistenceConverter implements AttributeConverter<Percentage, Double> {
 
     @Override
     public Double convertToDatabaseColumn (Percentage attribute) {

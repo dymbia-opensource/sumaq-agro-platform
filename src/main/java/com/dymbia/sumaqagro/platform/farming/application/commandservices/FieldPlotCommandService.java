@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.farming.application.commandservices;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.DelineatePlotBoundaryCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.LinkPlotPolygonCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RecordSoilBaselineCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
@@ -31,4 +32,12 @@ public interface FieldPlotCommandService {
      * @return the id of the field plot, or the error that stopped it
      */
     Result<Long, ApplicationError> handle(LinkPlotPolygonCommand command);
+
+    /**
+     * Records the initial soil analysis of a field plot.
+     *
+     * @param command the record soil baseline command
+     * @return the id of the field plot, or the error that stopped it
+     */
+    Result<Long, ApplicationError> handle(RecordSoilBaselineCommand command);
 }

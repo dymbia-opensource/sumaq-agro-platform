@@ -6,6 +6,8 @@ import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotBy
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.DelineatePlotBoundaryResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.FieldPlotResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.RegisterFieldPlotResource;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.SoilBaselineResource;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.RecordSoilBaselineCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.DelineatePlotBoundaryCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.FieldPlotResourceFromEntityAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.RegisterFieldPlotCommandFromResourceAssembler;
@@ -95,6 +97,21 @@ public class FieldPlotsController {
     public ResponseEntity<?> delineateBoundary(@PathVariable Long fieldPlotId,
                                                @RequestBody DelineatePlotBoundaryResource resource) {
         var command = DelineatePlotBoundaryCommandFromResourceAssembler.toCommandFromResource(fieldPlotId, resource);
+        return toResponseWithFieldPlot(fieldPlotCommandService.handle(command), HttpStatus.OK);
+    }
+
+    /**
+     * Records the initial soil analysis of a field plot. A new analysis replaces the previous one.
+     *
+     * @param fieldPlotId the plot id
+     * @param resource    the soil analysis
+     * @return 200 with the plot, or the problem detail of the error (400 or 404)
+     */
+    @Operation(summary = "Record the soil baseline of a field plot")
+    @PutMapping("{fieldPlotId}/soil-baseline")
+    public ResponseEntity<?> recordSoilBaseline(@PathVariable Long fieldPlotId,
+                                                @RequestBody SoilBaselineResource resource) {
+        var command = RecordSoilBaselineCommandFromResourceAssembler.toCommandFromResource(fieldPlotId, resource);
         return toResponseWithFieldPlot(fieldPlotCommandService.handle(command), HttpStatus.OK);
     }
 

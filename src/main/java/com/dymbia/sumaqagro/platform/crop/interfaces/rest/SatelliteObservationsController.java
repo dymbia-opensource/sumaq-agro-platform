@@ -8,6 +8,11 @@ import com.dymbia.sumaqagro.platform.crop.interfaces.rest.resources.SatelliteObs
 import com.dymbia.sumaqagro.platform.crop.interfaces.rest.transform.ImportSatelliteObservationCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.crop.interfaces.rest.transform.SatelliteObservationResourceFromEntityAssembler;
 import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +36,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
         value = "/api/v1/satellite-observations",
         produces = APPLICATION_JSON_VALUE
 )
+@Tag(name = "Satellite Observations", description = "Satellite observations by plot")
+@SecurityScheme(name = "sumaqAgroBearer", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
 public class SatelliteObservationsController {
 
     private final SatelliteObservationQueryService queryService;
@@ -52,6 +59,8 @@ public class SatelliteObservationsController {
      * @return a response entity containing the imported satellite observation resource
      */
     @PostMapping(value = "/import", consumes = APPLICATION_JSON_VALUE)
+    @Operation(summary = "Import the latest satellite observation in a date range",
+            security = @SecurityRequirement(name = "sumaqAgroBearer"))
     public ResponseEntity<?> importSatelliteObservation(
             @Valid @RequestBody ImportSatelliteObservationResource resource,
             @AuthenticationPrincipal(expression =
@@ -79,6 +88,7 @@ public class SatelliteObservationsController {
      * @return a response entity containing a list of satellite observation resources
      */
     @GetMapping
+    @Operation(summary = "Get satellite observations by plot ID")
     public ResponseEntity<List<SatelliteObservationResource>> getSatelliteObservationsByPlotId(
             @RequestParam("plotId") Long plotId
     ) {

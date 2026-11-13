@@ -4,6 +4,7 @@ import com.dymbia.sumaqagro.platform.farming.application.commandservices.FieldPl
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.DelineatePlotBoundaryCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.LinkPlotPolygonCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RecordSoilBaselineCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
@@ -87,6 +88,23 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
             return Result.failure(ApplicationError.notFound("FieldPlot", command.fieldPlotId().toString()));
         }
         fieldPlot.get().linkPolygon(command.polygonId());
+        fieldPlotRepository.save(fieldPlot.get());
+        return Result.success(command.fieldPlotId());
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * A missing plot is {@code notFound} (404). A new analysis replaces the previous one.
+     * </p>
+     */
+    @Override
+    public Result<Long, ApplicationError> handle(RecordSoilBaselineCommand command) {
+        var fieldPlot = fieldPlotRepository.findById(command.fieldPlotId());
+        if (fieldPlot.isEmpty()) {
+            return Result.failure(ApplicationError.notFound("FieldPlot", command.fieldPlotId().toString()));
+        }
+        fieldPlot.get().recordSoilBaseline(command.soilBaseline());
         fieldPlotRepository.save(fieldPlot.get());
         return Result.success(command.fieldPlotId());
     }

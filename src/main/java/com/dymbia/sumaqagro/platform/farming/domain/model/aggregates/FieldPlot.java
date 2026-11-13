@@ -4,6 +4,7 @@ import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterField
 import com.dymbia.sumaqagro.platform.farming.domain.model.events.PlotBoundaryDelineatedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotBoundary;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotStatus;
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SoilBaseline;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
@@ -35,6 +36,8 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     private String agroMonitoringPolygonId;
 
     private PlotBoundary boundary;
+
+    private SoilBaseline soilBaseline;
 
     private FieldPlot(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                       BigDecimal areaHectares, String agroMonitoringPolygonId) {
@@ -126,5 +129,27 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
      */
     public boolean hasPolygon() {
         return boundary != null;
+    }
+
+    /**
+     * Records the initial soil analysis of the plot. A new analysis replaces the previous one.
+     *
+     * @param soilBaseline the soil analysis
+     * @throws IllegalArgumentException if the soil analysis is null
+     */
+    public void recordSoilBaseline(SoilBaseline soilBaseline) {
+        if (soilBaseline == null) {
+            throw new IllegalArgumentException("field.plot.error.soil.required");
+        }
+        this.soilBaseline = soilBaseline;
+    }
+
+    /**
+     * Checks if the soil analysis of the field plot was already recorded
+     *
+     * @return {@code true} if the field plot has a soil analysis, {@code false} otherwise
+     */
+    public boolean hasSoilBaseline() {
+        return soilBaseline != null;
     }
 }

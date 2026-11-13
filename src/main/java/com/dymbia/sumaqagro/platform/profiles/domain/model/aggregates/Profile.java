@@ -32,6 +32,7 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
 
     private PhoneNumber phoneNumber;
 
+    @Getter
     private String photoUrl;
 
     @Getter
@@ -119,39 +120,12 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
     }
 
     /**
-     * Returns the phone number value object (could be null).
-     *
-     * @return the phone number, or {@code null} if not set
-     */
-    public PhoneNumber getPhoneNumberValue() {
-        return phoneNumber;
-    }
-
-    /**
-     * Returns the raw phone number string (could be null).
+     * Returns the raw phone number string (may be null).
      *
      * @return the phone number value, or {@code null} if not set
      */
     public String getPhoneNumber() {
         return phoneNumber != null ? phoneNumber.value() : null;
-    }
-
-    /**
-     * Returns the photo URL (could be null).
-     *
-     * @return the photo URL
-     */
-    public String getPhotoUrl() {
-        return photoUrl;
-    }
-
-    /**
-     * Full name convenience getter.
-     *
-     * @return full name
-     */
-    public String getFullName() {
-        return name.firstName() + " " + name.lastName();
     }
 
     /**

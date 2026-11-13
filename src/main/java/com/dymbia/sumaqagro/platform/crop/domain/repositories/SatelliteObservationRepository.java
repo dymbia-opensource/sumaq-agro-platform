@@ -11,5 +11,13 @@ public interface SatelliteObservationRepository {
 
     SatelliteObservation save(SatelliteObservation observation);
 
+    /**
+     * Saves an imported satellite observation.
+     *
+     * @param observation the satellite observation to save
+     * @return the saved satellite observation
+     */
+    SatelliteObservation saveImported(SatelliteObservation observation);
+
     List<SatelliteObservation> findAllByPlotId(Long plotId);
 }

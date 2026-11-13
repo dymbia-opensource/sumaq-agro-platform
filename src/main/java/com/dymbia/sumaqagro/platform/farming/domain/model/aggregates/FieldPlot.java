@@ -72,13 +72,15 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
      * @param areaHectares            the area in hectares
      * @param agroMonitoringPolygonId the agromonitoring polygon id
      * @param boundary                the polygon of the plot, may be null
+     * @param soilBaseline            the soil analysis, may be null
      * @return the field plot with the store state
      */
     public static FieldPlot reconstitute(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                                          BigDecimal areaHectares, String agroMonitoringPolygonId,
-                                         PlotBoundary boundary) {
+                                         PlotBoundary boundary, SoilBaseline soilBaseline) {
         var fieldPlot = new FieldPlot(id, ownerUserId, name, region, status, areaHectares, agroMonitoringPolygonId);
         fieldPlot.boundary = boundary;
+        fieldPlot.soilBaseline = soilBaseline;
         return fieldPlot;
     }
 

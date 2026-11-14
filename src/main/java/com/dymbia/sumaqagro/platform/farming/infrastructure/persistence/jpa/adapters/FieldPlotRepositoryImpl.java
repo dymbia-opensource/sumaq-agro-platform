@@ -44,7 +44,12 @@ public class FieldPlotRepositoryImpl implements FieldPlotRepository {
 
     @Override
     public long countByOwnerUserId(Long ownerUserId) {
-        return fieldPlotPersistenceRepository.countByOwnerUserId(ownerUserId);
+        return fieldPlotPersistenceRepository.countByOwnerUserIdAndCooperativeIdIsNull(ownerUserId);
+    }
+
+    @Override
+    public long countByCooperativeId(Long cooperativeId) {
+        return fieldPlotPersistenceRepository.countByCooperativeId(cooperativeId);
     }
 
     @Override

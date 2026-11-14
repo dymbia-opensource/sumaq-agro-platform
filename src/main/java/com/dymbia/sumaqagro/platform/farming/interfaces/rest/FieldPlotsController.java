@@ -59,8 +59,9 @@ public class FieldPlotsController {
             @RequestBody RegisterFieldPlotResource resource
     ) {
         if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        String requiredRole = resource.cooperativeId() == null ? "ROLE_FARMER" : "ROLE_COOPERATIVE_DIRECTOR";
         if (principal.getAuthorities().stream()
-                .noneMatch(authority -> "ROLE_FARMER".equals(authority.getAuthority()))
+                .noneMatch(authority -> requiredRole.equals(authority.getAuthority()))
                 || !principal.getId().equals(resource.ownerUserId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }

@@ -13,6 +13,7 @@ import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFaca
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Application-layer implementation of the Profiles ACL facade.
@@ -23,6 +24,16 @@ import java.util.Optional;
  */
 @Service
 public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean managesCooperativeMember(long directorId, long cooperativeId, long memberId) {
+        return cooperativeRepository.findById(cooperativeId)
+                .filter(cooperative -> cooperative.getManagerUserId().equals(directorId))
+                .map(cooperative -> cooperative.getMembers().stream()
+                        .anyMatch(member -> Long.valueOf(memberId).equals(member.getId())))
+                .orElse(false);
+    }
 
     private final ProfilesQueryService profilesQueryService;
     private final CooperativeRepository cooperativeRepository;

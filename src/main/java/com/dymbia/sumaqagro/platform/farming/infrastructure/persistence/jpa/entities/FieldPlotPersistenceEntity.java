@@ -28,6 +28,12 @@ public class FieldPlotPersistenceEntity extends AuditableAbstractPersistenceEnti
     @Column(name = "owner_user_id", nullable = false)
     private Long ownerUserId;
 
+    @Column(name = "cooperative_id", updatable = false)
+    private Long cooperativeId;
+
+    @Column(name = "cooperative_member_id", updatable = false)
+    private Long cooperativeMemberId;
+
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 

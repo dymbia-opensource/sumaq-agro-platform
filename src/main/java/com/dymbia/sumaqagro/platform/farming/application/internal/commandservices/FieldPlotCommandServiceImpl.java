@@ -13,6 +13,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.acl.SubscriptionsContextFacade;
+import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 
 /**
  * Implementation of the field plot command service.
@@ -27,15 +28,18 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
 
     private final FieldPlotRepository fieldPlotRepository;
     private final SubscriptionsContextFacade subscriptions;
+    private final ProfilesContextFacade profiles;
     private final TransactionTemplate transaction;
 
     public FieldPlotCommandServiceImpl(
             FieldPlotRepository fieldPlotRepository,
             SubscriptionsContextFacade subscriptions,
+            ProfilesContextFacade profiles,
             TransactionTemplate transaction
     ) {
         this.fieldPlotRepository = fieldPlotRepository;
         this.subscriptions = subscriptions;
+        this.profiles = profiles;
         this.transaction = transaction;
     }
 
@@ -56,15 +60,26 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
     }
 
     private Result<Long, ApplicationError> registerWithinTransaction(RegisterFieldPlotCommand command) {
-        var limit = subscriptions.lockSeedPlotLimit(command.ownerUserId());
+        boolean cooperativePlot = command.cooperativeId() != null;
+        var limit = cooperativePlot
+                ? subscriptions.lockCooperativePlotLimit(command.ownerUserId())
+                : subscriptions.lockSeedPlotLimit(command.ownerUserId());
         if (limit.isEmpty()) {
             return Result.failure(ApplicationError.businessRuleViolation(
-                    "seed-plan-required", "A current Seed subscription is required to register a plot."));
+                    "plot-plan-required", "A current subscription for this plot type is required."));
+        }
+        if (cooperativePlot && !profiles.managesCooperativeMember(
+                command.ownerUserId(), command.cooperativeId(), command.cooperativeMemberId())) {
+            return Result.failure(ApplicationError.notFound(
+                    "CooperativeMember", command.cooperativeMemberId().toString()));
         }
         if (fieldPlotRepository.existsByOwnerUserIdAndName(command.ownerUserId(), command.name())) {
             return Result.failure(ApplicationError.conflict("FieldPlot", DUPLICATE_NAME_REASON));
         }
-        if (fieldPlotRepository.countByOwnerUserId(command.ownerUserId()) >= limit.get()) {
+        long registered = cooperativePlot
+                ? fieldPlotRepository.countByCooperativeId(command.cooperativeId())
+                : fieldPlotRepository.countByOwnerUserId(command.ownerUserId());
+        if (registered >= limit.get()) {
             return Result.failure(ApplicationError.businessRuleViolation(
                     "plot-quota", "The producer reached the plot quota of the plan."));
         }

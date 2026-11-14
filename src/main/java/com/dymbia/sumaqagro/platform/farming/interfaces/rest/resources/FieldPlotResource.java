@@ -12,5 +12,7 @@ public record FieldPlotResource(
         BigDecimal areaHectares,
         String agroMonitoringPolygonId,
         List<GeoCoordinateResource> boundary,
-        SoilBaselineResource soilBaseline) {
+        SoilBaselineResource soilBaseline,
+        Long cooperativeId,
+        Long cooperativeMemberId) {
 }

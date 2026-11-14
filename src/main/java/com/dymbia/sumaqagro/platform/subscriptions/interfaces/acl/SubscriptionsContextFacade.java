@@ -9,4 +9,7 @@ public interface SubscriptionsContextFacade {
 
     /** Resolves the member limit while holding the director's subscription lock. */
     Optional<Integer> lockCooperativeMemberLimit(long userId);
+
+    /** Resolves the plot limit while holding the director's subscription lock. */
+    Optional<Integer> lockCooperativePlotLimit(long userId);
 }

@@ -40,6 +40,9 @@ public interface ProfilesContextFacade {
      */
     boolean isMemberOfCooperative(Long cooperativeId, String dni);
 
+    /** Checks that the director manages the cooperative and the member is on its roster. */
+    boolean managesCooperativeMember(long directorId, long cooperativeId, long memberId);
+
     /**
      * Returns the profile phone number of a user (useful for notifications).
      *

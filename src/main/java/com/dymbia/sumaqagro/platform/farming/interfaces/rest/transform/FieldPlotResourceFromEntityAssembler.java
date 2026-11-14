@@ -29,7 +29,9 @@ public final class FieldPlotResourceFromEntityAssembler {
                 entity.getBoundary()==null? List.of():
                         entity.getBoundary().vertices().stream().map(vertex->new GeoCoordinateResource(vertex.latitude(),
                                 vertex.longitude())).toList(),
-                toSoilBaselineResource(entity));
+                toSoilBaselineResource(entity),
+                entity.getCooperativeId(),
+                entity.getCooperativeMemberId());
     }
 
     // null when the soil analysis was not recorded yet

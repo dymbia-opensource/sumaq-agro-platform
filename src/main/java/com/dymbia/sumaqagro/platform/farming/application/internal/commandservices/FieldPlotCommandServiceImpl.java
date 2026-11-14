@@ -11,6 +11,9 @@ import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.acl.SubscriptionsContextFacade;
+import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 
 /**
  * Implementation of the field plot command service.
@@ -18,21 +21,26 @@ import org.springframework.stereotype.Service;
  * It checks the rules that need the database (repeated name and plot quota) before saving.
  * Like the commands of learning-center, it returns only the id: reading the plot is the job of the query service.
  * </p>
- * <p>
- * It is not {@code @Transactional}: a failed INSERT would mark the whole transaction as rollback-only,
- * and the commit at the end would turn the 409 conflict into a 500 error.
- * </p>
  */
 @Service
 public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
-    // Same limit as the web app
-    private static final long SEED_PLAN_PLOT_QUOTA = 4;
     private static final String DUPLICATE_NAME_REASON = "A plot with this name already exists for the producer.";
 
     private final FieldPlotRepository fieldPlotRepository;
+    private final SubscriptionsContextFacade subscriptions;
+    private final ProfilesContextFacade profiles;
+    private final TransactionTemplate transaction;
 
-    public FieldPlotCommandServiceImpl(FieldPlotRepository fieldPlotRepository) {
+    public FieldPlotCommandServiceImpl(
+            FieldPlotRepository fieldPlotRepository,
+            SubscriptionsContextFacade subscriptions,
+            ProfilesContextFacade profiles,
+            TransactionTemplate transaction
+    ) {
         this.fieldPlotRepository = fieldPlotRepository;
+        this.subscriptions = subscriptions;
+        this.profiles = profiles;
+        this.transaction = transaction;
     }
 
     /**
@@ -44,23 +52,38 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
      */
     @Override
     public Result<Long, ApplicationError> handle(RegisterFieldPlotCommand command) {
+        try {
+            return transaction.execute(status -> registerWithinTransaction(command));
+        } catch (DataIntegrityViolationException exception) {
+            return Result.failure(ApplicationError.conflict("FieldPlot", DUPLICATE_NAME_REASON));
+        }
+    }
+
+    private Result<Long, ApplicationError> registerWithinTransaction(RegisterFieldPlotCommand command) {
+        boolean cooperativePlot = command.cooperativeId() != null;
+        var limit = cooperativePlot
+                ? subscriptions.lockCooperativePlotLimit(command.ownerUserId())
+                : subscriptions.lockSeedPlotLimit(command.ownerUserId());
+        if (limit.isEmpty()) {
+            return Result.failure(ApplicationError.businessRuleViolation(
+                    "plot-plan-required", "A current subscription for this plot type is required."));
+        }
+        if (cooperativePlot && !profiles.managesCooperativeMember(
+                command.ownerUserId(), command.cooperativeId(), command.cooperativeMemberId())) {
+            return Result.failure(ApplicationError.notFound(
+                    "CooperativeMember", command.cooperativeMemberId().toString()));
+        }
         if (fieldPlotRepository.existsByOwnerUserIdAndName(command.ownerUserId(), command.name())) {
             return Result.failure(ApplicationError.conflict("FieldPlot", DUPLICATE_NAME_REASON));
         }
-        if (fieldPlotRepository.countByOwnerUserId(command.ownerUserId()) >= SEED_PLAN_PLOT_QUOTA)
-            return Result.failure(ApplicationError.businessRuleViolation("plot-quota", "The producer reached the plot" +
-                    " quota of the plan."));
-
-        var fieldPlot = new FieldPlot(command);
-        try {
-            // save runs the INSERT now (the adapter uses saveAndFlush)
-            fieldPlot = fieldPlotRepository.save(fieldPlot);
-        } catch (DataIntegrityViolationException exception) {
-            // Two requests with the same name at the same time: the unique constraint stops the second one
-            return Result.failure(ApplicationError.conflict("FieldPlot", DUPLICATE_NAME_REASON));
-        } catch (Exception exception) {
-            return Result.failure(ApplicationError.unexpected("register-field-plot", exception.getMessage()));
+        long registered = cooperativePlot
+                ? fieldPlotRepository.countByCooperativeId(command.cooperativeId())
+                : fieldPlotRepository.countByOwnerUserId(command.ownerUserId());
+        if (registered >= limit.get()) {
+            return Result.failure(ApplicationError.businessRuleViolation(
+                    "plot-quota", "The producer reached the plot quota of the plan."));
         }
+        var fieldPlot = fieldPlotRepository.save(new FieldPlot(command));
         return Result.success(fieldPlot.getId());
     }
 

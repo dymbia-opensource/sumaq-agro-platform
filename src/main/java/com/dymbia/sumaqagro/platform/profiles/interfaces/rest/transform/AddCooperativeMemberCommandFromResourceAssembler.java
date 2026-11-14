@@ -9,9 +9,11 @@ public final class AddCooperativeMemberCommandFromResourceAssembler {
     }
 
     public static AddCooperativeMemberCommand toCommandFromResource(Long cooperativeId,
+                                                                    long directorUserId,
                                                                     AddCooperativeMemberResource resource) {
         return new AddCooperativeMemberCommand(
                 cooperativeId,
+                directorUserId,
                 resource.dni(),
                 resource.firstName(),
                 resource.lastName(),

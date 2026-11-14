@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.profiles.interfaces.rest;
 
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
+
 import com.dymbia.sumaqagro.platform.profiles.application.commandservices.CooperativeCommandService;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.CooperativeQueryService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
@@ -24,6 +26,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -128,8 +131,14 @@ public class CooperativesController {
             @PathVariable
             @Parameter(description = "Cooperative unique identifier", example = "1", required = true)
             Long cooperativeId,
+            @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody AddCooperativeMemberResource resource) {
-        var command = AddCooperativeMemberCommandFromResourceAssembler.toCommandFromResource(cooperativeId, resource);
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (principal.getAuthorities().stream()
+                .noneMatch(authority -> "ROLE_COOPERATIVE_DIRECTOR".equals(authority.getAuthority()))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        var command = AddCooperativeMemberCommandFromResourceAssembler.toCommandFromResource(cooperativeId, principal.getId(), resource);
         var result = cooperativeCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 result, CooperativeMemberResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.CREATED);

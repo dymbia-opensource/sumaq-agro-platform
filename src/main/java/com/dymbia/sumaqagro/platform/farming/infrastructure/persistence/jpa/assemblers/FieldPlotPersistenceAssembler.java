@@ -28,7 +28,9 @@ public final class FieldPlotPersistenceAssembler {
                 entity.getAreaHectares(),
                 entity.getAgroMonitoringPolygonId(),
                 entity.getBoundary(),
-                toSoilBaseline(entity));
+                toSoilBaseline(entity),
+                entity.getCooperativeId(),
+                entity.getCooperativeMemberId());
     }
 
     /**
@@ -42,6 +44,8 @@ public final class FieldPlotPersistenceAssembler {
         var entity = new FieldPlotPersistenceEntity();
         entity.setId(fieldPlot.getId());
         entity.setOwnerUserId(fieldPlot.getOwnerUserId());
+        entity.setCooperativeId(fieldPlot.getCooperativeId());
+        entity.setCooperativeMemberId(fieldPlot.getCooperativeMemberId());
         entity.setName(fieldPlot.getName());
         entity.setRegion(fieldPlot.getRegion());
         entity.setStatus(fieldPlot.getStatus());

@@ -21,6 +21,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -52,7 +54,17 @@ public class FieldPlotsController {
      */
     @Operation(summary = "Register a field plot")
     @PostMapping
-    public ResponseEntity<?> registerFieldPlot(@RequestBody RegisterFieldPlotResource resource) {
+    public ResponseEntity<?> registerFieldPlot(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody RegisterFieldPlotResource resource
+    ) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        String requiredRole = resource.cooperativeId() == null ? "ROLE_FARMER" : "ROLE_COOPERATIVE_DIRECTOR";
+        if (principal.getAuthorities().stream()
+                .noneMatch(authority -> requiredRole.equals(authority.getAuthority()))
+                || !principal.getId().equals(resource.ownerUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var command = RegisterFieldPlotCommandFromResourceAssembler.toCommandFromResource(resource);
         return toResponseWithFieldPlot(fieldPlotCommandService.handle(command), HttpStatus.CREATED);
     }

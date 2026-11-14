@@ -14,6 +14,7 @@ import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFaca
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Implementation of {@link ProfilesContextFacade}. Like the professor's facade, it only talks
@@ -23,6 +24,16 @@ import java.util.Optional;
  */
 @Service
 public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean managesCooperativeMember(long directorId, long cooperativeId, long memberId) {
+        return cooperativeQueryService.handle(new GetCooperativeByIdQuery(cooperativeId))
+                .filter(cooperative -> cooperative.getManagerUserId().equals(directorId))
+                .map(cooperative -> cooperative.getMembers().stream()
+                        .anyMatch(member -> Long.valueOf(memberId).equals(member.getId())))
+                .orElse(false);
+    }
 
     private final ProfileCommandService profileCommandService;
     private final ProfileQueryService profileQueryService;
@@ -51,6 +62,12 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
         } catch (IllegalArgumentException e) {
             return 0L;
         }
+    }
+
+    @Override
+    public Optional<String> fetchFullNameByUserId(Long userId) {
+        return profileQueryService.handle(new GetProfileByUserIdQuery(userId))
+                .map(profile -> profile.getName().fullName());
     }
 
     @Override

@@ -17,9 +17,10 @@ public final class AuthenticatedUserResourceFromEntityAssembler {
      *
      * @param user the authenticated user
      * @param token the signed access token
+     * @param fullName the name from the user profile, when present
      * @return the response resource with the account roles
      */
-    public static AuthenticatedUserResource toResourceFromEntity(User user, String token) {
+    public static AuthenticatedUserResource toResourceFromEntity(User user, String token, String fullName) {
         var roles = user.getRoles().stream()
                 .map(Role::getStringName)
                 .sorted()
@@ -29,7 +30,8 @@ public final class AuthenticatedUserResourceFromEntityAssembler {
                 user.getId(),
                 user.getEmail().value(),
                 roles,
-                token
+                token,
+                fullName
         );
     }
 }

@@ -38,7 +38,7 @@ class CooperativeTests {
     @Test
     void shouldAddActiveMemberAndRejectRepeatedDni() {
         var cooperative = newCooperative();
-        var command = new AddCooperativeMemberCommand(1L, "45678912", "Guillermo", "Quispe", "Sicaya", null, 1L);
+        var command = new AddCooperativeMemberCommand(1L, 3L, "45678912", "Guillermo", "Quispe", "Sicaya", null, 1L);
 
         var member = cooperative.addMember(command);
 

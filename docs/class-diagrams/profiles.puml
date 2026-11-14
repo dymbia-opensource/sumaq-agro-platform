@@ -1,0 +1,59 @@
+@startuml
+title Profiles — Domain Class Diagram
+
+hide empty members
+skinparam classAttributeIconSize 0
+
+class Profile <<aggregate root>> {
+  - id: Long
+  - userId: Long
+}
+
+class Cooperative <<aggregate root>> {
+  - id: Long
+  - managerUserId: Long
+  + addMember(command): CooperativeMember
+  + inviteAgronomist(command): AgronomistInvitation
+}
+
+class CooperativeMember <<entity>> {
+  - id: Long
+  - cooperativeId: Long
+  - dni: Dni
+  - name: PersonName
+}
+
+class AgronomistInvitation <<entity>> {
+  - id: Long
+  - cooperativeId: Long
+}
+
+class AgronomistAssignment <<aggregate root>> {
+  - id: Long
+  - cooperativeId: Long
+  - agronomistUserId: Long
+  - plotId: Long
+  - assignedAt: Instant
+  - active: boolean
+  + deactivate(): void
+}
+
+class PersonName <<value object>>
+class Dni <<value object>>
+class Ruc <<value object>>
+enum InvitationStatus
+
+Profile --> PersonName
+Cooperative *-- "1" Ruc
+Cooperative *-- "0..*" CooperativeMember : roster
+Cooperative *-- "0..*" AgronomistInvitation : invitations
+CooperativeMember *-- "1" Dni
+CooperativeMember *-- "1" PersonName
+AgronomistInvitation --> InvitationStatus
+AgronomistAssignment ..> Cooperative : cooperativeId
+
+note right of AgronomistAssignment
+  agronomistUserId references IAM.
+  plotId references Farming.
+end note
+@enduml

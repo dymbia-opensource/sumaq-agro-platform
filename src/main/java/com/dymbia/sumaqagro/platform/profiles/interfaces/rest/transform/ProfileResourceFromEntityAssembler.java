@@ -3,28 +3,25 @@ package com.dymbia.sumaqagro.platform.profiles.interfaces.rest.transform;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.rest.resources.ProfileResource;
 
-import java.util.Objects;
-
-/**
- * Converts a Profile aggregate into its resource representation.
- *
- * @since 1.0
- */
 public final class ProfileResourceFromEntityAssembler {
 
     private ProfileResourceFromEntityAssembler() {
     }
 
-    public static ProfileResource toResourceFromEntity(Profile entity) {
-        Objects.requireNonNull(entity, "Profile is required.");
+    /**
+     * @param entity the profile
+     * @param email  the account email read from IAM (may be {@code null})
+     */
+    public static ProfileResource toResourceFromEntity(Profile entity, String email) {
         return new ProfileResource(
                 entity.getId(),
                 entity.getUserId(),
                 entity.getName().firstName(),
                 entity.getName().lastName(),
+                entity.getFullName(),
+                email,
                 entity.getPhoneNumber(),
                 entity.getPhotoUrl(),
-                entity.getPreferredLanguage().name()
-        );
+                entity.getPreferredLanguage().name());
     }
 }

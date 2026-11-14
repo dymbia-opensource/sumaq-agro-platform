@@ -11,5 +11,6 @@ public record FieldPlotResource(
         String status,
         BigDecimal areaHectares,
         String agroMonitoringPolygonId,
-        List<GeoCoordinateResource> boundary) {
+        List<GeoCoordinateResource> boundary,
+        SoilBaselineResource soilBaseline) {
 }

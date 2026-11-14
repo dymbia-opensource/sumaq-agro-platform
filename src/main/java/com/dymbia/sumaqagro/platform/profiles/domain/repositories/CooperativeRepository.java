@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.profiles.domain.repositories;
 
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,6 +29,13 @@ public interface CooperativeRepository {
      */
     Optional<Cooperative> findByRuc(String ruc);
 
+    List<Cooperative> findAll();
+
+    List<Cooperative> findAllByManagerUserId(Long managerUserId);
+
+    List<Cooperative> findAllByMemberUserId(Long userId);
+
+    boolean existsById(Long id);
     /**
      * Checks whether a cooperative with the given RUC already exists.
      *
@@ -36,6 +44,7 @@ public interface CooperativeRepository {
      */
     boolean existsByRuc(String ruc);
 
+    boolean existsByRucAndIdIsNot(String ruc, Long id);
     /**
      * Saves the cooperative.
      *

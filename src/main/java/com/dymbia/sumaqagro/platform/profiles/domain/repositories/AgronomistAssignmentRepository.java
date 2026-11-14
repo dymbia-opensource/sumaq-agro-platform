@@ -29,13 +29,15 @@ public interface AgronomistAssignmentRepository {
      */
     Optional<AgronomistAssignment> findActiveByPlotId(Long plotId);
 
-    /**
-     * Finds all assignments of a cooperative.
-     *
-     * @param cooperativeId the cooperative id
-     * @return the list of assignments
-     */
+    List<AgronomistAssignment> findAll();
+
     List<AgronomistAssignment> findAllByCooperativeId(Long cooperativeId);
+
+    List<AgronomistAssignment> findAllByProducerUserId(Long producerUserId);
+
+    List<AgronomistAssignment> findAllByAgronomistUserId(Long agronomistUserId);
+
+    List<AgronomistAssignment> findAllByPlotId(Long plotId);
 
     /**
      * Checks whether a plot already has an active assignment.

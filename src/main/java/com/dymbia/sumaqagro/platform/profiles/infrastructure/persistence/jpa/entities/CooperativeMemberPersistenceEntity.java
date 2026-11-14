@@ -7,7 +7,9 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 /**
- * JPA persistence entity for cooperative members.
+ * JPA mapping of a cooperative member (table {@code cooperative_members}).
+ *
+ * @since 1.0
  */
 @Entity
 @Table(name = "cooperative_members", uniqueConstraints = {
@@ -34,6 +36,12 @@ public class CooperativeMemberPersistenceEntity extends AuditableAbstractPersist
 
     @Column(name = "joined_at", nullable = false)
     private LocalDate joinedAt;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(name = "user_id")
+    private Long userId;
 
     public CooperativeMemberPersistenceEntity() {
     }
@@ -76,5 +84,21 @@ public class CooperativeMemberPersistenceEntity extends AuditableAbstractPersist
 
     public void setJoinedAt(LocalDate joinedAt) {
         this.joinedAt = joinedAt;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

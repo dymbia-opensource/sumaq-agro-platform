@@ -1,13 +1,17 @@
 package com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.entities;
 
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.EmailAddress;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.InvitationStatus;
+import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.converters.EmailAddressPersistenceConverter;
 import com.dymbia.sumaqagro.platform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
 
 /**
- * JPA persistence entity for agronomist invitations.
+ * JPA mapping of an agronomist invitation (table {@code agronomist_invitations}).
+ *
+ * @since 1.0
  */
 @Entity
 @Table(name = "agronomist_invitations", uniqueConstraints = {
@@ -19,8 +23,9 @@ public class AgronomistInvitationPersistenceEntity extends AuditableAbstractPers
     @JoinColumn(name = "cooperative_id", nullable = false)
     private CooperativePersistenceEntity cooperative;
 
+    @Convert(converter = EmailAddressPersistenceConverter.class)
     @Column(nullable = false, length = 150)
-    private String email;
+    private EmailAddress email;
 
     @Column(name = "invitation_token", nullable = false, length = 255)
     private String invitationToken;
@@ -43,11 +48,11 @@ public class AgronomistInvitationPersistenceEntity extends AuditableAbstractPers
         this.cooperative = cooperative;
     }
 
-    public String getEmail() {
+    public EmailAddress getEmail() {
         return email;
     }
 
-    public void setEmail(String email) {
+    public void setEmail(EmailAddress email) {
         this.email = email;
     }
 

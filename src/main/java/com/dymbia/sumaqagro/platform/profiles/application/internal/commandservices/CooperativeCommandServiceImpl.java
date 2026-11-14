@@ -5,6 +5,7 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperativ
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.AddCooperativeMemberCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.InviteAgronomistCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.RegisterCooperativeCommand;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.UpdateCooperativeCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.AgronomistInvitation;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
 import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
@@ -13,11 +14,6 @@ import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Implementation of CooperativeCommandService.
- *
- * @since 1.0
- */
 @Service
 public class CooperativeCommandServiceImpl implements CooperativeCommandService {
 
@@ -27,18 +23,17 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
         this.cooperativeRepository = cooperativeRepository;
     }
 
+    // inherited javadoc
     @Override
     @Transactional
     public Result<Cooperative, ApplicationError> handle(RegisterCooperativeCommand command) {
         try {
-            if (cooperativeRepository.existsByRuc(command.ruc())) {
-                return Result.failure(ApplicationError.conflict("Cooperative", "RUC already registered"));
+            if (cooperativeRepository.existsByRuc(command.ruc().trim())) {
+                return Result.failure(ApplicationError.conflict(
+                        "Cooperative", "RUC '%s' is already registered".formatted(command.ruc())));
             }
-
-            Cooperative cooperative = new Cooperative(command);
-            Cooperative saved = cooperativeRepository.save(cooperative);
-
-            return Result.success(saved);
+            var cooperative = new Cooperative(command);
+            return Result.success(cooperativeRepository.save(cooperative));
         } catch (IllegalArgumentException e) {
             return Result.failure(ApplicationError.validationError("Cooperative", e.getMessage()));
         } catch (Exception e) {
@@ -46,21 +41,44 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
         }
     }
 
+    // inherited javadoc
+    @Override
+    @Transactional
+    public Result<Cooperative, ApplicationError> handle(UpdateCooperativeCommand command) {
+        try {
+            var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
+            if (cooperativeOptional.isEmpty()) {
+                return Result.failure(ApplicationError.notFound("Cooperative", command.cooperativeId().toString()));
+            }
+            if (cooperativeRepository.existsByRucAndIdIsNot(command.ruc().trim(), command.cooperativeId())) {
+                return Result.failure(ApplicationError.conflict(
+                        "Cooperative", "RUC '%s' belongs to another cooperative".formatted(command.ruc())));
+            }
+            var cooperative = cooperativeOptional.get().updateInstitutionalData(command);
+            return Result.success(cooperativeRepository.save(cooperative));
+        } catch (IllegalArgumentException e) {
+            return Result.failure(ApplicationError.validationError("Cooperative", e.getMessage()));
+        } catch (Exception e) {
+            return Result.failure(ApplicationError.unexpected("Cooperative update", e.getMessage()));
+        }
+    }
+
+    // inherited javadoc
     @Override
     @Transactional
     public Result<CooperativeMember, ApplicationError> handle(AddCooperativeMemberCommand command) {
         try {
             var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
-
             if (cooperativeOptional.isEmpty()) {
-                return Result.failure(ApplicationError.notFound("Cooperative", "id=" + command.cooperativeId()));
+                return Result.failure(ApplicationError.notFound("Cooperative", command.cooperativeId().toString()));
             }
-
-            Cooperative cooperative = cooperativeOptional.get();
-            CooperativeMember member = cooperative.addMember(command);
-            cooperativeRepository.save(cooperative);
-
-            return Result.success(member);
+            var cooperative = cooperativeOptional.get();
+            var member = cooperative.addMember(command);
+            var savedCooperative = cooperativeRepository.save(cooperative);
+            // Read the member again from the saved cooperative so the response carries its id.
+            return savedCooperative.findMemberByDni(member.getDni().value())
+                    .<Result<CooperativeMember, ApplicationError>>map(Result::success)
+                    .orElseGet(() -> Result.failure(ApplicationError.notFound("CooperativeMember", member.getDni().value())));
         } catch (IllegalArgumentException e) {
             return Result.failure(ApplicationError.validationError("CooperativeMember", e.getMessage()));
         } catch (Exception e) {
@@ -68,23 +86,22 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
         }
     }
 
+    // inherited javadoc
     @Override
     @Transactional
     public Result<AgronomistInvitation, ApplicationError> handle(InviteAgronomistCommand command) {
         try {
             var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
-
             if (cooperativeOptional.isEmpty()) {
-                return Result.failure(ApplicationError.notFound("Cooperative", "id=" + command.cooperativeId()));
+                return Result.failure(ApplicationError.notFound("Cooperative", command.cooperativeId().toString()));
             }
-
-            Cooperative cooperative = cooperativeOptional.get();
-            AgronomistInvitation invitation = cooperative.inviteAgronomist(command);
-            cooperativeRepository.save(cooperative);
-
-            // TODO: send invitation email using NotificationSender (Brevo)
-
-            return Result.success(invitation);
+            var cooperative = cooperativeOptional.get();
+            var invitation = cooperative.inviteAgronomist(command);
+            var savedCooperative = cooperativeRepository.save(cooperative);
+            // TODO (en revisión con el equipo): enviar el correo de invitación con Brevo desde un event handler.
+            return savedCooperative.findInvitationByToken(invitation.getInvitationToken())
+                    .<Result<AgronomistInvitation, ApplicationError>>map(Result::success)
+                    .orElseGet(() -> Result.failure(ApplicationError.notFound("AgronomistInvitation", invitation.getEmail())));
         } catch (IllegalArgumentException e) {
             return Result.failure(ApplicationError.validationError("AgronomistInvitation", e.getMessage()));
         } catch (Exception e) {

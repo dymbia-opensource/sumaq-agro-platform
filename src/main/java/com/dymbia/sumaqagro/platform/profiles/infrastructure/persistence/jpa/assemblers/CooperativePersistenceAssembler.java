@@ -5,74 +5,91 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.AgronomistIn
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Dni;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PhoneNumber;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Ruc;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.embeddables.PersonNamePersistenceEmbeddable;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.entities.AgronomistInvitationPersistenceEntity;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.entities.CooperativeMemberPersistenceEntity;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.entities.CooperativePersistenceEntity;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * Assembles between the Cooperative domain aggregate and its JPA persistence entity.
+ * Translates between the {@link Cooperative} aggregate (with its members and invitations)
+ * and {@link CooperativePersistenceEntity}.
+ *
+ * @since 1.0
  */
 public final class CooperativePersistenceAssembler {
 
     private CooperativePersistenceAssembler() {
     }
 
-    public static CooperativePersistenceEntity toPersistenceFromDomain(Cooperative domain) {
-        var entity = new CooperativePersistenceEntity();
-        entity.setId(domain.getId());
-        entity.setRuc(domain.getRuc().value());
-        entity.setBusinessName(domain.getBusinessName());
-        entity.setRegion(domain.getRegion());
-        entity.setManagerUserId(domain.getManagerUserId());
-
-        List<CooperativeMemberPersistenceEntity> memberEntities = domain.getMembers().stream()
-                .map(m -> toMemberPersistence(m, entity))
-                .collect(Collectors.toList());
-        entity.setMembers(memberEntities);
-
-        List<AgronomistInvitationPersistenceEntity> invitationEntities = domain.getInvitations().stream()
-                .map(i -> toInvitationPersistence(i, entity))
-                .collect(Collectors.toList());
-        entity.setInvitations(invitationEntities);
-
-        return entity;
-    }
-
     public static Cooperative toDomainFromPersistence(CooperativePersistenceEntity entity) {
+        if (entity == null) return null;
         List<CooperativeMember> members = entity.getMembers().stream()
                 .map(CooperativePersistenceAssembler::toMemberDomain)
-                .collect(Collectors.toList());
-
+                .toList();
         List<AgronomistInvitation> invitations = entity.getInvitations().stream()
                 .map(CooperativePersistenceAssembler::toInvitationDomain)
-                .collect(Collectors.toList());
-
+                .toList();
         return Cooperative.reconstitute(
                 entity.getId(),
                 new Ruc(entity.getRuc()),
                 entity.getBusinessName(),
                 entity.getRegion(),
                 entity.getManagerUserId(),
+                entity.getInstitutionalEmail(),
+                entity.getLegalRepresentative(),
+                entity.getHeadquartersAddress(),
+                entity.getSwitchboardPhone() != null ? new PhoneNumber(entity.getSwitchboardPhone()) : null,
                 members,
-                invitations
-        );
+                invitations);
     }
 
-    private static CooperativeMemberPersistenceEntity toMemberPersistence(CooperativeMember domain,
+    public static CooperativePersistenceEntity toPersistenceFromDomain(Cooperative cooperative) {
+        var entity = new CooperativePersistenceEntity();
+        if (cooperative.getId() != null) {
+            entity.setId(cooperative.getId());
+        }
+        entity.setRuc(cooperative.getRuc().value());
+        entity.setBusinessName(cooperative.getBusinessName());
+        entity.setRegion(cooperative.getRegion());
+        entity.setManagerUserId(cooperative.getManagerUserId());
+        entity.setInstitutionalEmail(cooperative.getInstitutionalEmailValue());
+        entity.setLegalRepresentative(cooperative.getLegalRepresentative());
+        entity.setHeadquartersAddress(cooperative.getHeadquartersAddress());
+        entity.setSwitchboardPhone(cooperative.getSwitchboardPhone());
+
+        var memberEntities = new ArrayList<CooperativeMemberPersistenceEntity>();
+        for (var member : cooperative.getMembers()) {
+            memberEntities.add(toMemberPersistence(member, entity));
+        }
+        entity.setMembers(memberEntities);
+
+        var invitationEntities = new ArrayList<AgronomistInvitationPersistenceEntity>();
+        for (var invitation : cooperative.getInvitations()) {
+            invitationEntities.add(toInvitationPersistence(invitation, entity));
+        }
+        entity.setInvitations(invitationEntities);
+        return entity;
+    }
+
+    private static CooperativeMemberPersistenceEntity toMemberPersistence(CooperativeMember member,
                                                                           CooperativePersistenceEntity cooperative) {
         var entity = new CooperativeMemberPersistenceEntity();
-        entity.setId(domain.getId());
+        if (member.getId() != null) {
+            entity.setId(member.getId());
+        }
         entity.setCooperative(cooperative);
-        entity.setDni(domain.getDni().value());
+        entity.setDni(member.getDni().value());
         entity.setName(new PersonNamePersistenceEmbeddable(
-                domain.getName().firstName(), domain.getName().lastName()));
-        entity.setCommunity(domain.getCommunity());
-        entity.setJoinedAt(domain.getJoinedAt());
+                member.getName().firstName(), member.getName().lastName()));
+        entity.setCommunity(member.getCommunity());
+        entity.setJoinedAt(member.getJoinedAt());
+        entity.setActive(member.isActive());
+        entity.setUserId(member.getUserId());
         return entity;
     }
 
@@ -83,19 +100,22 @@ public final class CooperativePersistenceAssembler {
                 new Dni(entity.getDni()),
                 new PersonName(entity.getName().getFirstName(), entity.getName().getLastName()),
                 entity.getCommunity(),
-                entity.getJoinedAt()
-        );
+                entity.getJoinedAt(),
+                entity.isActive(),
+                entity.getUserId());
     }
 
-    private static AgronomistInvitationPersistenceEntity toInvitationPersistence(AgronomistInvitation domain,
+    private static AgronomistInvitationPersistenceEntity toInvitationPersistence(AgronomistInvitation invitation,
                                                                                  CooperativePersistenceEntity cooperative) {
         var entity = new AgronomistInvitationPersistenceEntity();
-        entity.setId(domain.getId());
+        if (invitation.getId() != null) {
+            entity.setId(invitation.getId());
+        }
         entity.setCooperative(cooperative);
-        entity.setEmail(domain.getEmail());
-        entity.setInvitationToken(domain.getInvitationToken());
-        entity.setStatus(domain.getStatus());
-        entity.setSentAt(domain.getSentAt());
+        entity.setEmail(invitation.getEmailValue());
+        entity.setInvitationToken(invitation.getInvitationToken());
+        entity.setStatus(invitation.getStatus());
+        entity.setSentAt(invitation.getSentAt());
         return entity;
     }
 
@@ -106,7 +126,6 @@ public final class CooperativePersistenceAssembler {
                 entity.getEmail(),
                 entity.getInvitationToken(),
                 entity.getStatus(),
-                entity.getSentAt()
-        );
+                entity.getSentAt());
     }
 }

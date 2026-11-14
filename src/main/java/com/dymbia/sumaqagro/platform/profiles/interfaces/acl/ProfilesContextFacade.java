@@ -20,6 +20,9 @@ public interface ProfilesContextFacade {
      */
     void createProfile(Long userId, String firstName, String lastName);
 
+    /** Returns the full name stored in the user profile, when present. */
+    Optional<String> fetchFullNameByUserId(Long userId);
+
     /**
      * Returns the user id of the agronomist currently assigned to the given plot.
      *

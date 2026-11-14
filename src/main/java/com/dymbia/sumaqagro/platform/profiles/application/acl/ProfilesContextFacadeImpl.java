@@ -51,6 +51,12 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
     }
 
     @Override
+    public Optional<String> fetchFullNameByUserId(Long userId) {
+        return profilesQueryService.handle(new GetProfileByUserIdQuery(userId))
+                .map(profile -> profile.getName().fullName());
+    }
+
+    @Override
     public Optional<Long> fetchAgronomistUserIdByPlotId(Long plotId) {
         if (plotId == null || plotId <= 0) {
             return Optional.empty();

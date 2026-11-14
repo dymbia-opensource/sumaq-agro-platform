@@ -1,5 +1,6 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates;
 
+import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.CreateProfileCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.UpdateProfileCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.events.ProfileUpdatedEvent;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
@@ -11,14 +12,13 @@ import lombok.Getter;
 import java.util.Objects;
 
 /**
- * Profile aggregate root.
+ * Profile aggregate root: contact data of one IAM user.
  *
- * <p>Extends {@link AbstractDomainAggregateRoot} to gain domain event registration
- * support. No JPA or persistence annotation is present here — those concerns live
- * exclusively in {@code ProfilePersistenceEntity}.</p>
+ * <p>No JPA annotation lives here; the table is mapped by {@code ProfilePersistenceEntity}.</p>
  *
- * <p>There is exactly one profile per IAM user.</p>
+ * @since 1.0
  */
+
 public class Profile extends AbstractDomainAggregateRoot<Profile> {
 
     @Getter
@@ -99,43 +99,41 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
         this(null, userId, name, phoneNumber, photoUrl, preferredLanguage);
     }
 
+    public Profile(CreateProfileCommand command) {
+        this(command.userId(),
+                new PersonName(command.firstName(), command.lastName()),
+                null,
+                null,
+                PreferredLanguage.ES);
+    }
+
     /**
-     * Updates the profile data from the given command and registers a domain event.
-     *
-     * @param command the update data
+     * Updates the contact data. Values that are not sent (photo, language) keep their current value.
      */
     public void update(UpdateProfileCommand command) {
         Objects.requireNonNull(command, "command must not be null");
-
         this.name = new PersonName(command.firstName(), command.lastName());
         this.phoneNumber = command.phoneNumber() != null && !command.phoneNumber().isBlank()
                 ? new PhoneNumber(command.phoneNumber())
                 : null;
-        this.photoUrl = command.photoUrl();
-        this.preferredLanguage = command.preferredLanguage() != null
-                ? command.preferredLanguage()
-                : this.preferredLanguage;
-
+        if (command.photoUrl() != null) {
+            this.photoUrl = command.photoUrl().isBlank() ? null : command.photoUrl().trim();
+        }
+        if (command.preferredLanguage() != null) {
+            this.preferredLanguage = command.preferredLanguage();
+        }
         registerDomainEvent(new ProfileUpdatedEvent(this.id, this.userId));
     }
 
-    /**
-     * Returns the raw phone number string (may be null).
-     *
-     * @return the phone number value, or {@code null} if not set
-     */
+    public String getFullName() {
+        return name.getFullName();
+    }
+
     public String getPhoneNumber() {
         return phoneNumber != null ? phoneNumber.value() : null;
     }
 
-    /**
-     * Signals that this profile has just been updated and persisted.
-     *
-     * <p>Called by the repository adapter after the aggregate has been saved.
-     * Registers a {@link ProfileUpdatedEvent} so the infrastructure can publish it
-     * to interested subscribers in other bounded contexts.</p>
-     */
-    public void onUpdated() {
-        registerDomainEvent(new ProfileUpdatedEvent(this.id, this.userId));
+    public PhoneNumber getPhoneNumberValue() {
+        return phoneNumber;
     }
 }

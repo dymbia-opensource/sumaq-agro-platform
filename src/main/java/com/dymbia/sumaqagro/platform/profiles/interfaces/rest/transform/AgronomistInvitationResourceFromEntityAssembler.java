@@ -19,7 +19,7 @@ public final class AgronomistInvitationResourceFromEntityAssembler {
         Objects.requireNonNull(entity, "Agronomist invitation is required.");
         return new AgronomistInvitationResource(
                 entity.getId(),
-                entity.getCooperative().getId(),
+                entity.getCooperativeId(),
                 entity.getEmail(),
                 entity.getStatus().name(),
                 entity.getSentAt()

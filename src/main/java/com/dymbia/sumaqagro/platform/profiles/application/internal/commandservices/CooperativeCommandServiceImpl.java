@@ -10,6 +10,7 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeM
 import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.acl.SubscriptionsContextFacade;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +23,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class CooperativeCommandServiceImpl implements CooperativeCommandService {
 
     private final CooperativeRepository cooperativeRepository;
+    private final SubscriptionsContextFacade subscriptions;
 
-    public CooperativeCommandServiceImpl(CooperativeRepository cooperativeRepository) {
+    public CooperativeCommandServiceImpl(
+            CooperativeRepository cooperativeRepository, SubscriptionsContextFacade subscriptions
+    ) {
         this.cooperativeRepository = cooperativeRepository;
+        this.subscriptions = subscriptions;
     }
 
     @Override
@@ -49,14 +54,24 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
     @Override
     @Transactional
     public Result<CooperativeMember, ApplicationError> handle(AddCooperativeMemberCommand command) {
+        var limit = subscriptions.lockCooperativeMemberLimit(command.directorUserId());
+        if (limit.isEmpty()) {
+            return Result.failure(ApplicationError.businessRuleViolation(
+                    "cooperative-pro-required", "A current Cooperative Pro subscription is required."));
+        }
         try {
             var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
 
-            if (cooperativeOptional.isEmpty()) {
+            if (cooperativeOptional.isEmpty()
+                    || !cooperativeOptional.get().getManagerUserId().equals(command.directorUserId())) {
                 return Result.failure(ApplicationError.notFound("Cooperative", "id=" + command.cooperativeId()));
             }
 
             Cooperative cooperative = cooperativeOptional.get();
+            if (cooperative.getMembers().size() >= limit.get()) {
+                return Result.failure(ApplicationError.businessRuleViolation(
+                        "cooperative-member-quota", "The cooperative reached its member quota."));
+            }
             CooperativeMember member = cooperative.addMember(command);
             cooperativeRepository.save(cooperative);
 

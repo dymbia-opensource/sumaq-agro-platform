@@ -6,6 +6,7 @@ import java.time.LocalDate;
  * Command to add a member to a cooperative.
  *
  * @param cooperativeId identity of the cooperative
+ * @param directorUserId identity of the authenticated director
  * @param dni           DNI of the member (8 digits)
  * @param firstName     first name of the member
  * @param lastName      last name of the member
@@ -15,6 +16,7 @@ import java.time.LocalDate;
  */
 public record AddCooperativeMemberCommand(
         Long cooperativeId,
+        long directorUserId,
         String dni,
         String firstName,
         String lastName,
@@ -22,6 +24,9 @@ public record AddCooperativeMemberCommand(
         LocalDate joinedAt
 ) {
     public AddCooperativeMemberCommand {
+        if (directorUserId <= 0) {
+            throw new IllegalArgumentException("Director user id must be positive");
+        }
         if (cooperativeId == null || cooperativeId <= 0) {
             throw new IllegalArgumentException("Cooperative id must be a positive number");
         }

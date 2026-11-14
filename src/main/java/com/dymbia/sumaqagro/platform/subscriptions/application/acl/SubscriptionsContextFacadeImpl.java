@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
 
-/** Resolves the plot quota from the paid Seed subscription and catalog. */
+/** Resolves limits from paid subscriptions and the plan catalog. */
 @Service
 public class SubscriptionsContextFacadeImpl implements SubscriptionsContextFacade {
     private static final ZoneId BILLING_ZONE = ZoneId.of("America/Lima");
@@ -28,10 +28,19 @@ public class SubscriptionsContextFacadeImpl implements SubscriptionsContextFacad
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public Optional<Integer> lockSeedPlotLimit(long userId) {
+        return findCurrentPlanForUpdate(userId, PlanCode.SEED).map(Plan::getRegisteredPlotLimit);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Integer> lockCooperativeMemberLimit(long userId) {
+        return findCurrentPlanForUpdate(userId, PlanCode.COOPERATIVE_PRO).map(Plan::getProducerLimit);
+    }
+
+    private Optional<Plan> findCurrentPlanForUpdate(long userId, PlanCode code) {
         return subscriptions.findByUserIdForUpdate(userId)
-                .filter(subscription -> subscription.getPlanCode() == PlanCode.SEED)
+                .filter(subscription -> subscription.getPlanCode() == code)
                 .filter(subscription -> subscription.hasAccessOn(LocalDate.now(BILLING_ZONE)))
-                .flatMap(subscription -> plans.findByCode(subscription.getPlanCode()))
-                .map(Plan::getRegisteredPlotLimit);
+                .flatMap(subscription -> plans.findByCode(code));
     }
 }

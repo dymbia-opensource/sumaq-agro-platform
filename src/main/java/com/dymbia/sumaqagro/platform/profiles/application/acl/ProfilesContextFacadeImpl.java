@@ -86,7 +86,7 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
 
         return profilesQueryService.handle(new GetProfileByUserIdQuery(userId))
                 .map(profile -> profile.getPhoneNumber() != null
-                        ? profile.getPhoneNumber().value()
+                        ? profile.getPhoneNumber()
                         : null)
                 .filter(phone -> phone != null && !phone.isBlank());
     }

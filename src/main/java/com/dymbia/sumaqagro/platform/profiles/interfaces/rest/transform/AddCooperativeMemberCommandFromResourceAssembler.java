@@ -16,10 +16,12 @@ public final class AddCooperativeMemberCommandFromResourceAssembler {
     }
 
     public static AddCooperativeMemberCommand toCommandFromResource(Long cooperativeId,
+                                                                    long directorUserId,
                                                                     AddCooperativeMemberResource resource) {
         Objects.requireNonNull(resource, "Add cooperative member request body is required.");
         return new AddCooperativeMemberCommand(
                 cooperativeId,
+                directorUserId,
                 resource.dni(),
                 resource.firstName(),
                 resource.lastName(),

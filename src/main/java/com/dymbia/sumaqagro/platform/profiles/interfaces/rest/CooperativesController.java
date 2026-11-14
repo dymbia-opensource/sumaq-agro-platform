@@ -1,18 +1,21 @@
 package com.dymbia.sumaqagro.platform.profiles.interfaces.rest;
 
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
+
 import com.dymbia.sumaqagro.platform.profiles.application.commandservices.CooperativeCommandService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.AgronomistInvitation;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.rest.resources.*;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.rest.transform.*;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
+import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -49,17 +52,21 @@ public class CooperativesController {
     @Operation(summary = "Add a member to a cooperative")
     @PostMapping("/{cooperativeId}/members")
     public ResponseEntity<?> addMember(@PathVariable Long cooperativeId,
+                                       @AuthenticationPrincipal UserDetailsImpl principal,
                                        @RequestBody AddCooperativeMemberResource resource) {
-        var command = AddCooperativeMemberCommandFromResourceAssembler.toCommandFromResource(cooperativeId, resource);
-        Result<CooperativeMember, ApplicationError> result = cooperativeCommandService.handle(command);
-
-        if (result.isSuccess()) {
-            CooperativeMember member = ((Result.Success<CooperativeMember, ApplicationError>) result).value();
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CooperativeMemberResourceFromEntityAssembler.toResourceFromEntity(member));
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (principal.getAuthorities().stream()
+                .noneMatch(authority -> "ROLE_COOPERATIVE_DIRECTOR".equals(authority.getAuthority()))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        var command = AddCooperativeMemberCommandFromResourceAssembler.toCommandFromResource(
+                cooperativeId, principal.getId(), resource);
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+                cooperativeCommandService.handle(command),
+                CooperativeMemberResourceFromEntityAssembler::toResourceFromEntity,
+                HttpStatus.CREATED
+        );
     }
 
     @Operation(summary = "Invite an agronomist to a cooperative")

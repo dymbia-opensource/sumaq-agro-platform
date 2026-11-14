@@ -19,7 +19,7 @@ public final class CooperativeMemberResourceFromEntityAssembler {
         Objects.requireNonNull(entity, "Cooperative member is required.");
         return new CooperativeMemberResource(
                 entity.getId(),
-                entity.getCooperative().getId(),
+                entity.getCooperativeId(),
                 entity.getDni().value(),
                 entity.getName().firstName(),
                 entity.getName().lastName(),

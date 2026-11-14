@@ -4,9 +4,11 @@ import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import com.dymbia.sumaqagro.platform.subscriptions.application.commandservices.SubscriptionCommandService;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.commands.PaymentCommand;
+import com.dymbia.sumaqagro.platform.subscriptions.domain.commands.CancelSubscriptionCommand;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.aggregates.Subscription;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.entities.Payment;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.valueobjects.PaymentStatus;
+import com.dymbia.sumaqagro.platform.subscriptions.domain.model.valueobjects.SubscriptionStatus;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.repositories.PaymentRepository;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.repositories.PlanRepository;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.repositories.SubscriptionRepository;
@@ -19,6 +21,24 @@ import java.util.UUID;
 /** Records the checkout outcome and activates approved first subscriptions. */
 @Service
 public class SubscriptionCommandServiceImpl implements SubscriptionCommandService {
+
+    @Override
+    @Transactional
+    public Result<Subscription, ApplicationError> handle(CancelSubscriptionCommand command) {
+        var existing = subscriptionRepository.findByUserId(command.userId());
+        if (existing.isEmpty()) {
+            return Result.failure(ApplicationError.notFound(
+                    "subscription", Long.toString(command.userId())));
+        }
+
+        var subscription = existing.get();
+        if (subscription.getStatus() == SubscriptionStatus.CANCELLED) {
+            return Result.success(subscription);
+        }
+
+        subscription.cancelRenewal();
+        return Result.success(subscriptionRepository.save(subscription));
+    }
     private static final ZoneId BILLING_ZONE = ZoneId.of("America/Lima");
 
     private final PlanRepository planRepository;

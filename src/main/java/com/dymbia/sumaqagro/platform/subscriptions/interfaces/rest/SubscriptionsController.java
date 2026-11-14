@@ -2,6 +2,11 @@ package com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest;
 
 import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import com.dymbia.sumaqagro.platform.subscriptions.application.queryservices.SubscriptionQueryService;
+import com.dymbia.sumaqagro.platform.subscriptions.application.commandservices.SubscriptionCommandService;
+import com.dymbia.sumaqagro.platform.subscriptions.domain.commands.CancelSubscriptionCommand;
+import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PostMapping;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.queries.GetPaymentsByUserIdQuery;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.queries.GetSubscriptionByUserIdQuery;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.resources.PaymentResource;
@@ -25,8 +30,25 @@ public class SubscriptionsController {
 
     private final SubscriptionQueryService subscriptionQueryService;
 
-    public SubscriptionsController(SubscriptionQueryService subscriptionQueryService) {
+    private final SubscriptionCommandService subscriptionCommandService;
+
+    public SubscriptionsController(
+            SubscriptionQueryService subscriptionQueryService,
+            SubscriptionCommandService subscriptionCommandService
+    ) {
         this.subscriptionQueryService = subscriptionQueryService;
+        this.subscriptionCommandService = subscriptionCommandService;
+    }
+
+    /** Cancels renewal for the authenticated account. */
+    @PostMapping("/me/cancel")
+    public ResponseEntity<?> cancelMySubscription(@AuthenticationPrincipal UserDetailsImpl principal) {
+        var result = subscriptionCommandService.handle(new CancelSubscriptionCommand(principal.getId()));
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+                result,
+                SubscriptionResourceFromEntityAssembler::toResourceFromEntity,
+                HttpStatus.OK
+        );
     }
 
     /**

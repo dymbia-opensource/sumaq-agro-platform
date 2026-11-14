@@ -17,8 +17,8 @@ public class Subscription extends AbstractDomainAggregateRoot<Subscription> {
     private final Long id;
     private final long userId;
     private final PlanCode planCode;
-    private final BillingCycle billingCycle;
-    private final SubscriptionPeriod period;
+    private BillingCycle billingCycle;
+    private SubscriptionPeriod period;
     private SubscriptionStatus status;
 
     private Subscription(
@@ -66,6 +66,21 @@ public class Subscription extends AbstractDomainAggregateRoot<Subscription> {
         }
 
         return new Subscription(id, userId, planCode, cycle, period, status);
+    }
+
+    /** Extends access after an approved renewal, preserving any remaining paid days. */
+    public void renew(BillingCycle cycle, LocalDate approvedOn) {
+        Objects.requireNonNull(cycle, "Billing cycle is required");
+        Objects.requireNonNull(approvedOn, "Approval date is required");
+
+        if (approvedOn.isAfter(period.endDate())) {
+            period = SubscriptionPeriod.startingOn(approvedOn, cycle);
+        } else {
+            period = new SubscriptionPeriod(period.startDate(), period.endDate().plusMonths(cycle.months()));
+        }
+
+        billingCycle = cycle;
+        status = SubscriptionStatus.ACTIVE;
     }
 
     /** Cancels renewal while preserving the current paid period. */

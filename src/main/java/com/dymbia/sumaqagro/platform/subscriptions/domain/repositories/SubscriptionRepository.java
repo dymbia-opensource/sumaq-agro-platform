@@ -15,7 +15,14 @@ public interface SubscriptionRepository {
      */
     Optional<Subscription> findByUserId(long userId);
 
-    /** Persists a subscription and returns it with its assigned identity. */
+    /**
+     * Loads the account's subscription for an update inside a transaction.
+     */
+    Optional<Subscription> findByUserIdForUpdate(long userId);
+
+    /**
+     * Persists a subscription and returns it with its assigned identity.
+     */
     Subscription save(Subscription subscription);
 
 }

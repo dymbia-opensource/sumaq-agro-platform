@@ -18,14 +18,14 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.UUID;
 
-/** Records the checkout outcome and activates approved first subscriptions. */
+/** Records checkout outcomes and activates or renews approved subscriptions. */
 @Service
 public class SubscriptionCommandServiceImpl implements SubscriptionCommandService {
 
     @Override
     @Transactional
     public Result<Subscription, ApplicationError> handle(CancelSubscriptionCommand command) {
-        var existing = subscriptionRepository.findByUserId(command.userId());
+        var existing = subscriptionRepository.findByUserIdForUpdate(command.userId());
         if (existing.isEmpty()) {
             return Result.failure(ApplicationError.notFound(
                     "subscription", Long.toString(command.userId())));
@@ -62,18 +62,25 @@ public class SubscriptionCommandServiceImpl implements SubscriptionCommandServic
         if (plan.isEmpty()) {
             return Result.failure(ApplicationError.notFound("plan", command.selectedPlan().name()));
         }
-        if (subscriptionRepository.findByUserId(command.userId()).isPresent()) {
+        var existing = subscriptionRepository.findByUserIdForUpdate(command.userId());
+        if (existing.isPresent() && existing.get().getPlanCode() != command.selectedPlan()) {
             return Result.failure(ApplicationError.conflict(
-                    "subscription", "The account already has a subscription"));
+                    "subscription", "The selected plan must match the existing subscription"));
         }
 
         var now = Instant.now();
         var amount = plan.get().priceFor(command.billingCycle());
-        Long subscriptionId = null;
+        Long subscriptionId = existing.map(Subscription::getId).orElse(null);
         if (command.simulatedOutcome() == PaymentStatus.COMPLETED) {
-            var subscription = Subscription.activate(
-                    command.userId(), command.selectedPlan(), command.billingCycle(),
-                    now.atZone(BILLING_ZONE).toLocalDate());
+            var approvedOn = now.atZone(BILLING_ZONE).toLocalDate();
+            Subscription subscription;
+            if (existing.isPresent()) {
+                subscription = existing.get();
+                subscription.renew(command.billingCycle(), approvedOn);
+            } else {
+                subscription = Subscription.activate(
+                        command.userId(), command.selectedPlan(), command.billingCycle(), approvedOn);
+            }
             subscriptionId = subscriptionRepository.save(subscription).getId();
         }
 

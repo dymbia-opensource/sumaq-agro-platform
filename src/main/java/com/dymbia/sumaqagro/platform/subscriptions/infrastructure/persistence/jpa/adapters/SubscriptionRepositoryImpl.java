@@ -30,4 +30,10 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepository {
         return persistenceRepository.findByUserId(userId)
                 .map(SubscriptionPersistenceAssembler::toDomainFromPersistence);
     }
+
+    @Override
+    public Optional<Subscription> findByUserIdForUpdate(long userId) {
+        return persistenceRepository.findByUserIdForUpdate(userId)
+                .map(SubscriptionPersistenceAssembler::toDomainFromPersistence);
+    }
 }

@@ -7,13 +7,13 @@ import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.rep
 import com.dymbia.sumaqagro.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository adapter that bridges the domain profile repository port with Spring Data JPA.
+ * Adapter that implements the domain {@link ProfileRepository} with Spring Data JPA.
  *
- * <p>Also acts as the event-publishing boundary: after a profile is persisted,
- * registered domain events are dispatched via {@link DomainEventPublisher}.</p>
+ * @since 1.0
  */
 @Repository
 public class ProfileRepositoryImpl implements ProfileRepository {
@@ -27,36 +27,37 @@ public class ProfileRepositoryImpl implements ProfileRepository {
         this.domainEventPublisher = domainEventPublisher;
     }
 
-    /** {@inheritDoc} */
     @Override
     public Optional<Profile> findById(Long id) {
         return profilePersistenceRepository.findById(id)
                 .map(ProfilePersistenceAssembler::toDomainFromPersistence);
     }
 
-    /** {@inheritDoc} */
     @Override
     public Optional<Profile> findByUserId(Long userId) {
         return profilePersistenceRepository.findByUserId(userId)
                 .map(ProfilePersistenceAssembler::toDomainFromPersistence);
     }
 
-    /** {@inheritDoc} */
+    @Override
+    public List<Profile> findAll() {
+        return profilePersistenceRepository.findAll().stream()
+                .map(ProfilePersistenceAssembler::toDomainFromPersistence)
+                .toList();
+    }
+
     @Override
     public boolean existsByUserId(Long userId) {
         return profilePersistenceRepository.existsByUserId(userId);
     }
 
-    /** {@inheritDoc} */
     @Override
     public Profile save(Profile profile) {
         var savedEntity = profilePersistenceRepository.save(
                 ProfilePersistenceAssembler.toPersistenceFromDomain(profile));
         var savedProfile = ProfilePersistenceAssembler.toDomainFromPersistence(savedEntity);
-
-        // Publish any domain events that were registered (e.g. from update())
-        domainEventPublisher.publishAndClearEvents(savedProfile);
-
+        // The events were registered on the object we received (e.g. by update()), not on the copy read back.
+        domainEventPublisher.publishAndClearEvents(profile);
         return savedProfile;
     }
 }

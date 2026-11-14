@@ -12,73 +12,108 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Dni;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.InvitationStatus;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Ruc;
-import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import jakarta.persistence.*;
+import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * Cooperative aggregate root.
- * Manages the cooperative data, its member registry and agronomist invitations.
  *
- * @since 1.0
+ * <p>Extends {@link AbstractDomainAggregateRoot} to gain domain event registration
+ * support. No JPA or persistence annotation is present here — those concerns live
+ * exclusively in {@code CooperativePersistenceEntity}.</p>
+ *
+ * <p>Manages the cooperative data, its member registry (padrón) and agronomist invitations.</p>
  */
-@Getter
-@Entity
-@Table(name = "cooperatives", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "ruc", name = Cooperative.RUC_UNIQUE_CONSTRAINT)
-})
-public class Cooperative extends AuditableAbstractAggregateRoot<Cooperative> {
+public class Cooperative extends AbstractDomainAggregateRoot<Cooperative> {
 
-    public static final String RUC_UNIQUE_CONSTRAINT = "uk_cooperatives_ruc";
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Getter
     private Long id;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "ruc", nullable = false, length = 11))
+    @Getter
     private Ruc ruc;
 
-    @Column(name = "business_name", nullable = false, length = 150)
+    @Getter
     private String businessName;
 
-    @Column(nullable = false, length = 100)
+    @Getter
     private String region;
 
-    @Column(name = "manager_user_id", nullable = false)
+    @Getter
     private Long managerUserId;
 
-    @OneToMany(mappedBy = "cooperative", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CooperativeMember> members = new ArrayList<>();
+    private final List<CooperativeMember> members = new ArrayList<>();
+    private final List<AgronomistInvitation> invitations = new ArrayList<>();
 
-    @OneToMany(mappedBy = "cooperative", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AgronomistInvitation> invitations = new ArrayList<>();
+    /**
+     * Creates a cooperative from the provided domain values.
+     */
+    public Cooperative(Long id,
+                       Ruc ruc,
+                       String businessName,
+                       String region,
+                       Long managerUserId,
+                       List<CooperativeMember> members,
+                       List<AgronomistInvitation> invitations) {
+        this.id = id;
+        this.ruc = Objects.requireNonNull(ruc, "ruc must not be null");
+        this.businessName = Objects.requireNonNull(businessName, "businessName must not be null").trim();
+        this.region = Objects.requireNonNull(region, "region must not be null").trim();
+        this.managerUserId = Objects.requireNonNull(managerUserId, "managerUserId must not be null");
 
-    /** Required by JPA */
-    protected Cooperative() {}
+        if (members != null) {
+            this.members.addAll(members);
+        }
+        if (invitations != null) {
+            this.invitations.addAll(invitations);
+        }
+    }
 
+    /**
+     * Reconstitutes an existing cooperative from persistence state.
+     */
+    public static Cooperative reconstitute(Long id,
+                                           Ruc ruc,
+                                           String businessName,
+                                           String region,
+                                           Long managerUserId,
+                                           List<CooperativeMember> members,
+                                           List<AgronomistInvitation> invitations) {
+        return new Cooperative(id, ruc, businessName, region, managerUserId, members, invitations);
+    }
+
+    /**
+     * Creates a new cooperative from the register command (no identity assigned yet).
+     *
+     * @param command the register cooperative command
+     */
     public Cooperative(RegisterCooperativeCommand command) {
-        this.ruc = new Ruc(command.ruc());
-        this.businessName = command.businessName().trim();
-        this.region = command.region().trim();
-        this.managerUserId = command.managerUserId();
+        this(null,
+                new Ruc(command.ruc()),
+                command.businessName(),
+                command.region(),
+                command.managerUserId(),
+                null,
+                null);
 
-        registerEvent(new CooperativeRegisteredEvent(null, this.ruc.value(), this.managerUserId));
+        registerDomainEvent(new CooperativeRegisteredEvent(null, this.ruc.value(), this.managerUserId));
     }
 
     /**
      * Adds a new member to the cooperative padrón.
      *
-     * @param command member data
+     * @param command the member data
      * @return the created member
      */
     public CooperativeMember addMember(AddCooperativeMemberCommand command) {
+        Objects.requireNonNull(command, "command must not be null");
+
         boolean alreadyExists = members.stream()
                 .anyMatch(m -> m.getDni().value().equals(command.dni()));
         if (alreadyExists) {
@@ -86,7 +121,8 @@ public class Cooperative extends AuditableAbstractAggregateRoot<Cooperative> {
         }
 
         CooperativeMember member = new CooperativeMember(
-                this,
+                null,
+                this.id,
                 new Dni(command.dni()),
                 new PersonName(command.firstName(), command.lastName()),
                 command.community(),
@@ -94,21 +130,24 @@ public class Cooperative extends AuditableAbstractAggregateRoot<Cooperative> {
         );
         members.add(member);
 
-        registerEvent(new CooperativeMemberAddedEvent(this.id, member.getDni().value()));
+        registerDomainEvent(new CooperativeMemberAddedEvent(this.id, member.getDni().value()));
         return member;
     }
 
     /**
      * Creates and registers an invitation for an agronomist.
      *
-     * @param command invitation data
+     * @param command the invitation data
      * @return the created invitation
      */
     public AgronomistInvitation inviteAgronomist(InviteAgronomistCommand command) {
+        Objects.requireNonNull(command, "command must not be null");
+
         String token = UUID.randomUUID().toString();
 
         AgronomistInvitation invitation = new AgronomistInvitation(
-                this,
+                null,
+                this.id,
                 command.email().trim().toLowerCase(),
                 token,
                 InvitationStatus.PENDING,
@@ -116,7 +155,30 @@ public class Cooperative extends AuditableAbstractAggregateRoot<Cooperative> {
         );
         invitations.add(invitation);
 
-        registerEvent(new AgronomistInvitedEvent(this.id, invitation.getEmail(), token));
+        registerDomainEvent(new AgronomistInvitedEvent(this.id, invitation.getEmail(), token));
         return invitation;
+    }
+
+    /**
+     * Returns an unmodifiable view of the members.
+     */
+    public List<CooperativeMember> getMembers() {
+        return Collections.unmodifiableList(members);
+    }
+
+    /**
+     * Returns an unmodifiable view of the invitations.
+     */
+    public List<AgronomistInvitation> getInvitations() {
+        return Collections.unmodifiableList(invitations);
+    }
+
+    /**
+     * Signals that this cooperative has just been registered and persisted.
+     *
+     * <p>Called by the repository adapter after the JPA identity has been assigned.</p>
+     */
+    public void onRegistered() {
+        registerDomainEvent(new CooperativeRegisteredEvent(this.id, this.ruc.value(), this.managerUserId));
     }
 }

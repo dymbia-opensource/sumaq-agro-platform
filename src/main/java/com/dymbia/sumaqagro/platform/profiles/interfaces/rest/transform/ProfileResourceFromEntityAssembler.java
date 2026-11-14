@@ -22,7 +22,7 @@ public final class ProfileResourceFromEntityAssembler {
                 entity.getUserId(),
                 entity.getName().firstName(),
                 entity.getName().lastName(),
-                entity.getPhoneNumber() != null ? entity.getPhoneNumber().value() : null,
+                entity.getPhoneNumber(),
                 entity.getPhotoUrl(),
                 entity.getPreferredLanguage().name()
         );

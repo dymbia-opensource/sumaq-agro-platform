@@ -13,7 +13,11 @@ public record RegisterCooperativeCommand(
         String ruc,
         String businessName,
         String region,
-        Long managerUserId
+        Long managerUserId,
+        String institutionalEmail,
+        String legalRepresentative,
+        String headquartersAddress,
+        String switchboardPhone
 ) {
     public RegisterCooperativeCommand {
         if (ruc == null || ruc.isBlank()) {

@@ -25,11 +25,11 @@ public final class DelineatePlotBoundaryCommandFromResourceAssembler {
     public static DelineatePlotBoundaryCommand toCommandFromResource(Long fieldPlotId,
                                                                      DelineatePlotBoundaryResource resource) {
         Objects.requireNonNull(resource, "Delineate plot boundary request required");
-        if (resource.vertices() == null) {
+        if (resource.coordinates() == null) {
             throw new IllegalArgumentException("field.plot.error.boundary.required");
         }
         var vertices =
-                resource.vertices().stream().map(DelineatePlotBoundaryCommandFromResourceAssembler::toGeoCoordinate).toList();
+                resource.coordinates().stream().map(DelineatePlotBoundaryCommandFromResourceAssembler::toGeoCoordinate).toList();
         return new DelineatePlotBoundaryCommand(fieldPlotId, new PlotBoundary(vertices));
     }
 

@@ -1,10 +1,10 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.commands;
 
 /**
- * Command to assign an agronomist to a plot of a cooperative.
+ * Command used by the cooperative director to assign an agronomist to a plot (US-20).
  *
- * @param cooperativeId    identity of the cooperative
- * @param agronomistUserId identity of the agronomist (user from IAM)
+ * @param cooperativeId    cooperative that makes the assignment (required)
+ * @param agronomistUserId IAM user id of the agronomist
  * @param plotId           identity of the plot (from Field Management)
  * @since 1.0
  */

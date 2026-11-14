@@ -1,0 +1,41 @@
+@startuml
+title Farming — Domain Model
+skinparam classAttributeIconSize 0
+
+class FieldPlot <<Aggregate Root>> {
+  - id: Long
+  - ownerUserId: Long
+  - name: String
+  - region: String
+  - areaHectares: BigDecimal
+  - agroMonitoringPolygonId: String
+  + delineateBoundary(boundary: PlotBoundary): void
+}
+
+class CropCampaign <<Aggregate Root>> {
+  - id: Long
+  - fieldPlotId: FieldPlotId
+}
+
+class FieldPlotId <<Value Object>>
+class PlotBoundary <<Value Object>>
+class GeoCoordinate <<Value Object>>
+class SoilBaseline <<Value Object>>
+class SeedVariety <<Value Object>>
+
+enum PlotStatus
+enum CampaignStatus
+enum CropType
+enum SoilTexture
+
+FieldPlot *-- "0..1" PlotBoundary
+PlotBoundary *-- "3..*" GeoCoordinate : vertices
+FieldPlot *-- "0..1" SoilBaseline
+FieldPlot --> PlotStatus
+SoilBaseline --> SoilTexture
+CropCampaign --> FieldPlotId
+FieldPlotId ..> FieldPlot : identifies
+CropCampaign --> CampaignStatus
+CropCampaign --> CropType
+CropCampaign --> SeedVariety
+@enduml

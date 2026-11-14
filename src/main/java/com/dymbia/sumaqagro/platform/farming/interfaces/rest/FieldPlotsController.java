@@ -101,11 +101,11 @@ public class FieldPlotsController {
      * Draws or redraws the polygon of a field plot.
      *
      * @param fieldPlotId the plot id
-     * @param resource    the vertices of the polygon
+     * @param resource    the coordinates of the polygon
      * @return 200 with the plot, or the problem detail of the error (400 or 404)
      */
-    @Operation(summary = "Delineate the boundary of a field plot")
-    @PutMapping("{fieldPlotId}/boundary")
+    @Operation(summary = "Delineate the polygon of a field plot")
+    @PutMapping("{fieldPlotId}/polygon")
     public ResponseEntity<?> delineateBoundary(@PathVariable Long fieldPlotId,
                                                @RequestBody DelineatePlotBoundaryResource resource) {
         var command = DelineatePlotBoundaryCommandFromResourceAssembler.toCommandFromResource(fieldPlotId, resource);

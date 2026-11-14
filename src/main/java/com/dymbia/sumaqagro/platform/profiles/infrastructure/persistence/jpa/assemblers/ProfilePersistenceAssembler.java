@@ -7,45 +7,37 @@ import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.emb
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.entities.ProfilePersistenceEntity;
 
 /**
- * Assembles between the Profile domain aggregate and its JPA persistence entity.
+ * Translates between the {@link Profile} aggregate and {@link ProfilePersistenceEntity}.
+ *
+ * @since 1.0
  */
 public final class ProfilePersistenceAssembler {
 
     private ProfilePersistenceAssembler() {
     }
 
-    /**
-     * Converts a domain Profile into a persistence entity.
-     *
-     * @param domain the domain aggregate
-     * @return the persistence entity
-     */
-    public static ProfilePersistenceEntity toPersistenceFromDomain(Profile domain) {
-        var entity = new ProfilePersistenceEntity();
-        entity.setId(domain.getId());
-        entity.setUserId(domain.getUserId());
-        entity.setName(toPersistenceFromDomain(domain.getName()));
-        entity.setPhoneNumber(domain.getPhoneNumber());
-        entity.setPhotoUrl(domain.getPhotoUrl());
-        entity.setPreferredLanguage(domain.getPreferredLanguage());
-        return entity;
-    }
-
-    /**
-     * Converts a persistence entity into a domain Profile.
-     *
-     * @param entity the persistence entity
-     * @return the domain aggregate
-     */
     public static Profile toDomainFromPersistence(ProfilePersistenceEntity entity) {
+        if (entity == null) return null;
         return Profile.reconstitute(
                 entity.getId(),
                 entity.getUserId(),
                 toDomainFromPersistence(entity.getName()),
                 entity.getPhoneNumber() != null ? new PhoneNumber(entity.getPhoneNumber()) : null,
                 entity.getPhotoUrl(),
-                entity.getPreferredLanguage()
-        );
+                entity.getPreferredLanguage());
+    }
+
+    public static ProfilePersistenceEntity toPersistenceFromDomain(Profile profile) {
+        var entity = new ProfilePersistenceEntity();
+        if (profile.getId() != null) {
+            entity.setId(profile.getId());
+        }
+        entity.setUserId(profile.getUserId());
+        entity.setName(toPersistenceFromDomain(profile.getName()));
+        entity.setPhoneNumber(profile.getPhoneNumber());
+        entity.setPhotoUrl(profile.getPhotoUrl());
+        entity.setPreferredLanguage(profile.getPreferredLanguage());
+        return entity;
     }
 
     private static PersonNamePersistenceEmbeddable toPersistenceFromDomain(PersonName value) {

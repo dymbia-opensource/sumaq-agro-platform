@@ -21,7 +21,8 @@ public record AddCooperativeMemberCommand(
         String firstName,
         String lastName,
         String community,
-        LocalDate joinedAt
+        LocalDate joinedAt,
+        Long userId
 ) {
     public AddCooperativeMemberCommand {
         if (directorUserId <= 0) {
@@ -41,6 +42,9 @@ public record AddCooperativeMemberCommand(
         }
         if (community == null || community.isBlank()) {
             throw new IllegalArgumentException("Community must not be null or blank");
+        }
+        if (userId != null && userId <= 0) {
+            throw new IllegalArgumentException("User id must be a positive number");
         }
     }
 }

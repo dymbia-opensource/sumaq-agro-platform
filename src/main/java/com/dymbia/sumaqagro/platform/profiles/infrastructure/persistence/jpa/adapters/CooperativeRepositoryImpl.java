@@ -7,10 +7,13 @@ import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.rep
 import com.dymbia.sumaqagro.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository adapter that bridges the domain cooperative repository port with Spring Data JPA.
+ * Adapter that implements the domain {@link CooperativeRepository} with Spring Data JPA.
+ *
+ * @since 1.0
  */
 @Repository
 public class CooperativeRepositoryImpl implements CooperativeRepository {
@@ -37,17 +40,55 @@ public class CooperativeRepositoryImpl implements CooperativeRepository {
     }
 
     @Override
+    public List<Cooperative> findAll() {
+        return cooperativePersistenceRepository.findAll().stream()
+                .map(CooperativePersistenceAssembler::toDomainFromPersistence)
+                .toList();
+    }
+
+    @Override
+    public List<Cooperative> findAllByManagerUserId(Long managerUserId) {
+        return cooperativePersistenceRepository.findAllByManagerUserId(managerUserId).stream()
+                .map(CooperativePersistenceAssembler::toDomainFromPersistence)
+                .toList();
+    }
+
+    @Override
+    public List<Cooperative> findAllByMemberUserId(Long userId) {
+        return cooperativePersistenceRepository.findAllByMemberUserId(userId).stream()
+                .map(CooperativePersistenceAssembler::toDomainFromPersistence)
+                .toList();
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return cooperativePersistenceRepository.existsById(id);
+    }
+
+    @Override
     public boolean existsByRuc(String ruc) {
         return cooperativePersistenceRepository.existsByRuc(ruc);
     }
 
     @Override
+    public boolean existsByRucAndIdIsNot(String ruc, Long id) {
+        return cooperativePersistenceRepository.existsByRucAndIdIsNot(ruc, id);
+    }
+
+    @Override
     public Cooperative save(Cooperative cooperative) {
+        boolean isNew = cooperative.getId() == null;
         var savedEntity = cooperativePersistenceRepository.save(
                 CooperativePersistenceAssembler.toPersistenceFromDomain(cooperative));
         var savedCooperative = CooperativePersistenceAssembler.toDomainFromPersistence(savedEntity);
-
-        domainEventPublisher.publishAndClearEvents(savedCooperative);
+        if (isNew) {
+            // Same idea as the professor's Profile.onCreated(): the event is created when the id exists.
+            savedCooperative.onRegistered();
+            domainEventPublisher.publishAndClearEvents(savedCooperative);
+        } else {
+            // Events from addMember() / inviteAgronomist() live on the object we received.
+            domainEventPublisher.publishAndClearEvents(cooperative);
+        }
         return savedCooperative;
     }
 }

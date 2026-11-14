@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.profiles.domain.repositories;
 
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,6 +28,8 @@ public interface ProfileRepository {
      * @return the profile, or an empty optional
      */
     Optional<Profile> findByUserId(Long userId);
+
+    List<Profile> findAll();
 
     /**
      * Checks whether a profile already exists for the given user.

@@ -1,0 +1,60 @@
+@startuml
+title Crop Health — Domain Model
+skinparam classAttributeIconSize 0
+
+class SatelliteObservation <<Aggregate Root>> {
+  - id: Long
+  - plotId: Long
+}
+
+class ClimateForecast <<Aggregate Root>> {
+  - id: Long
+}
+
+class AgroclimaticAlert <<Aggregate Root>> {
+  - id: Long
+}
+
+class RegionalBulletin <<Aggregate Root>> {
+  - id: Long
+  - agronomistId: Long
+}
+
+class PestReport <<Aggregate Root>> {
+  - id: Long
+  - plotId: Long
+  - reporterId: Long
+}
+
+class FieldInspection <<Aggregate Root>> {
+  - id: Long
+  - pestReportId: Long
+  - plotId: Long
+  - agronomistId: Long
+}
+
+class TechnicalPrescription <<Aggregate Root>> {
+  - id: Long
+  - pestReportId: Long
+  - plotId: Long
+  - agronomistId: Long
+}
+
+class NdviIndex <<Value Object>>
+class NdwiIndex <<Value Object>>
+enum AgroclimaticAlertSeverity
+enum PestReportSeverity
+enum PestReportStatus
+enum FieldInspectionStatus
+enum TechnicalPrescriptionStatus
+
+SatelliteObservation --> NdviIndex
+SatelliteObservation --> NdwiIndex
+AgroclimaticAlert --> AgroclimaticAlertSeverity
+PestReport --> PestReportSeverity
+PestReport --> PestReportStatus
+FieldInspection --> FieldInspectionStatus
+TechnicalPrescription --> TechnicalPrescriptionStatus
+FieldInspection ..> PestReport : pestReportId
+TechnicalPrescription ..> PestReport : pestReportId
+@enduml

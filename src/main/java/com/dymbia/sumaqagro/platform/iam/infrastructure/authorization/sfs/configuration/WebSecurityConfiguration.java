@@ -59,6 +59,17 @@ public class WebSecurityConfiguration {
                 .authorizeHttpRequests(configurer -> configurer
                         .requestMatchers(HttpMethod.POST, "/api/v1/users", "/api/v1/tokens").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/field-plots").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/field-plots/*/polygon").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/field-plots/*").permitAll()
+                        .requestMatchers(
+                                "/api/v1/pest-reports", "/api/v1/pest-reports/**",
+                                "/api/v1/field-inspections", "/api/v1/field-inspections/**",
+                                "/api/v1/technical-prescriptions", "/api/v1/technical-prescriptions/**",
+                                "/api/v1/satellite-observations", "/api/v1/satellite-observations/**",
+                                "/api/v1/climate-forecasts", "/api/v1/climate-forecasts/**",
+                                "/api/v1/agroclimatic-alerts", "/api/v1/agroclimatic-alerts/**",
+                                "/api/v1/regional-bulletins", "/api/v1/regional-bulletins/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(bearerFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

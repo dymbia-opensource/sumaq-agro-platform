@@ -1,14 +1,13 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects;
 
 /**
- * Person name value object (first name + last name).
+ * Person name value object (first name and last name).
  *
- * @param firstName person's first name, not blank
- * @param lastName  person's last name, not blank
+ * <p>Shared by {@code Profile} and {@code CooperativeMember} through composition.</p>
+ *
  * @since 1.0
  */
 public record PersonName(String firstName, String lastName) {
-
     private static final int MAX_LENGTH = 100;
 
     public PersonName {
@@ -28,7 +27,14 @@ public record PersonName(String firstName, String lastName) {
         }
     }
 
+    public String getFullName() {
+        return "%s %s".formatted(firstName, lastName);
+    }
+
+    /**
+     * Kept for code that already used it.
+     */
     public String fullName() {
-        return firstName + " " + lastName;
+        return getFullName();
     }
 }

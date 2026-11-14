@@ -35,6 +35,8 @@ public interface FieldPlotRepository {
      */
     long countByOwnerUserId(Long ownerUserId);
 
+    long countByCooperativeId(Long cooperativeId);
+
     /**
      * Checks whether a producer already has a plot with that name.
      *

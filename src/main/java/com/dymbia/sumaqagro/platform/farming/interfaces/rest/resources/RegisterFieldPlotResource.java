@@ -9,5 +9,7 @@ public record RegisterFieldPlotResource(
         Long ownerUserId,
         String name,
         String region,
-        BigDecimal areaHectares) {
+        BigDecimal areaHectares,
+        Long cooperativeId,
+        Long cooperativeMemberId) {
 }

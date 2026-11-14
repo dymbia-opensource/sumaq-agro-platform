@@ -1,0 +1,26 @@
+@startuml
+title IAM — Domain Class Diagram
+
+hide empty members
+skinparam classAttributeIconSize 0
+
+class User <<aggregate root>> {
+  - id: Long
+  - email: EmailAddress
+  - passwordHash: String
+  - roles: Set<Role>
+}
+
+class Role <<entity>>
+class EmailAddress <<value object>>
+
+enum Roles {
+  ROLE_FARMER
+  ROLE_COOPERATIVE_DIRECTOR
+  ROLE_AGRONOMIST
+}
+
+User *-- "1" EmailAddress
+User --> "1..*" Role : assigned roles
+Role --> Roles : name
+@enduml

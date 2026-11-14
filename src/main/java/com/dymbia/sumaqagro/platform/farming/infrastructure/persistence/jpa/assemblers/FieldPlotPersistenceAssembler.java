@@ -1,6 +1,7 @@
 package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.assemblers;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SoilBaseline;
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.entities.FieldPlotPersistenceEntity;
 
 /**
@@ -25,7 +26,11 @@ public final class FieldPlotPersistenceAssembler {
                 entity.getRegion(),
                 entity.getStatus(),
                 entity.getAreaHectares(),
-                entity.getAgroMonitoringPolygonId());
+                entity.getAgroMonitoringPolygonId(),
+                entity.getBoundary(),
+                toSoilBaseline(entity),
+                entity.getCooperativeId(),
+                entity.getCooperativeMemberId());
     }
 
     /**
@@ -39,11 +44,30 @@ public final class FieldPlotPersistenceAssembler {
         var entity = new FieldPlotPersistenceEntity();
         entity.setId(fieldPlot.getId());
         entity.setOwnerUserId(fieldPlot.getOwnerUserId());
+        entity.setCooperativeId(fieldPlot.getCooperativeId());
+        entity.setCooperativeMemberId(fieldPlot.getCooperativeMemberId());
         entity.setName(fieldPlot.getName());
         entity.setRegion(fieldPlot.getRegion());
         entity.setStatus(fieldPlot.getStatus());
         entity.setAreaHectares(fieldPlot.getAreaHectares());
         entity.setAgroMonitoringPolygonId(fieldPlot.getAgroMonitoringPolygonId());
+        entity.setBoundary(fieldPlot.getBoundary());
+        var soilBaseline = fieldPlot.getSoilBaseline();
+        if (soilBaseline != null) {
+            entity.setSoilPh(soilBaseline.ph());
+            entity.setSoilTexture(soilBaseline.texture());
+            entity.setSoilOrganicMatterPercentage(soilBaseline.organicMatterPercentage());
+            entity.setSoilRecordedAt(soilBaseline.recordedAt());
+        }
         return entity;
+    }
+
+    // The four soil columns are empty until the analysis is recorded
+    private static SoilBaseline toSoilBaseline(FieldPlotPersistenceEntity entity) {
+        if (entity.getSoilPh() == null) {
+            return null;
+        }
+        return new SoilBaseline(entity.getSoilPh(), entity.getSoilTexture(),
+                entity.getSoilOrganicMatterPercentage(), entity.getSoilRecordedAt());
     }
 }

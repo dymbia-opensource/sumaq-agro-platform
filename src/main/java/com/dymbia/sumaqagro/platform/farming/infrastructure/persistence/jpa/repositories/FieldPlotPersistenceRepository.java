@@ -11,7 +11,9 @@ public interface FieldPlotPersistenceRepository extends JpaRepository<FieldPlotP
 
     List<FieldPlotPersistenceEntity> findAllByOwnerUserId(Long ownerUserId);
 
-    long countByOwnerUserId(Long ownerUserId);
+    long countByCooperativeId(Long cooperativeId);
+
+    long countByOwnerUserIdAndCooperativeIdIsNull(Long ownerUserId);
 
     boolean existsByOwnerUserIdAndName(Long ownerUserId, String name);
 }

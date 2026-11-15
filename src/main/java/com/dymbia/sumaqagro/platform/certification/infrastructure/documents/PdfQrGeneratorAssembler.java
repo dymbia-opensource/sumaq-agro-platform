@@ -72,6 +72,13 @@ public final class PdfQrGeneratorAssembler {
         return new GeneratedCertificate(pdf, qrPng, hash);
     }
 
+    /** Renders a saved certificate using its original verification hash. */
+    public static byte[] renderIssued(HarvestBatch batch, String certificateNumber, Long issuedByUserId,
+                                      Instant issuedAt, String hash, String publicBaseUrl) {
+        var qr = qrPng(verificationUrl(publicBaseUrl, certificateNumber, hash));
+        return pdf(batch, certificateNumber, issuedByUserId, issuedAt, hash, qr);
+    }
+
     private static String canonicalContent(HarvestBatch batch, String certificateNumber, Long issuedByUserId,
                                            Instant issuedAt) {
         return String.join("|",

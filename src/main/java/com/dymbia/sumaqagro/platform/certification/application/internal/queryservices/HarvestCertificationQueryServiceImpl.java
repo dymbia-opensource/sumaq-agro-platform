@@ -54,13 +54,17 @@ public class HarvestCertificationQueryServiceImpl implements HarvestCertificatio
     }
 
     private PublicTraceability toPublicTraceability(QualityCertificate certificate, HarvestBatch batch, String presentedHash) {
+        if (!certificate.verify(presentedHash)) {
+            return new PublicTraceability(certificate.getCertificateNumber(), certificate.getStatus(),
+                    false, null, null, null, null, null);
+        }
         ExternalFieldManagementService.FieldOrigin origin = externalFieldManagementService
                 .findOriginByPlotId(batch.getPlotId())
                 .orElse(null);
         return new PublicTraceability(
                 certificate.getCertificateNumber(),
                 certificate.getStatus(),
-                certificate.verify(presentedHash),
+                true,
                 batch.getBatchCode(),
                 batch.getCropType(),
                 certificate.getQualityCategory(),

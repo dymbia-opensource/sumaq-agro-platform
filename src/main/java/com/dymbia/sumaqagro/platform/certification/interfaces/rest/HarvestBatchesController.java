@@ -21,6 +21,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,11 +41,14 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @Tag(name = "Harvest Batches", description = "Harvest batch registration, weighing, sampling and grading")
 public class HarvestBatchesController {
 
+    private final CertificationAccess access;
     private final HarvestBatchCommandService harvestBatchCommandService;
     private final HarvestCertificationQueryService harvestCertificationQueryService;
 
     public HarvestBatchesController(HarvestBatchCommandService harvestBatchCommandService,
-                                    HarvestCertificationQueryService harvestCertificationQueryService) {
+                                    HarvestCertificationQueryService harvestCertificationQueryService,
+                                    CertificationAccess access) {
+        this.access = access;
         this.harvestBatchCommandService = harvestBatchCommandService;
         this.harvestCertificationQueryService = harvestCertificationQueryService;
     }
@@ -56,7 +61,14 @@ public class HarvestBatchesController {
      */
     @Operation(summary = "Register a harvest batch")
     @PostMapping
-    public ResponseEntity<?> registerHarvestBatch(@RequestBody RegisterHarvestBatchResource resource) {
+    public ResponseEntity<?> registerHarvestBatch(@RequestBody RegisterHarvestBatchResource resource,
+                                                  @AuthenticationPrincipal UserDetailsImpl principal) {
+        if (!access.directs(principal, resource.cooperativeId())) return ResponseEntity.status(403).build();
+        if (!access.plotBelongsToMember(resource.cooperativeId(), resource.memberId(), resource.plotId())) {
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
+                    ApplicationError.businessRuleViolation("member-plot",
+                            "The plot must belong to an active member of this cooperative."));
+        }
         var command = RegisterHarvestBatchCommandFromResourceAssembler.toCommandFromResource(resource);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 harvestBatchCommandService.handle(command),
@@ -72,8 +84,10 @@ public class HarvestBatchesController {
      */
     @Operation(summary = "Get a harvest batch by ID")
     @GetMapping("{harvestBatchId}")
-    public ResponseEntity<?> getHarvestBatchById(@PathVariable Long harvestBatchId) {
+    public ResponseEntity<?> getHarvestBatchById(@PathVariable Long harvestBatchId,
+                                                 @AuthenticationPrincipal UserDetailsImpl principal) {
         return harvestCertificationQueryService.handle(new GetHarvestBatchByIdQuery(harvestBatchId))
+                .filter(batch -> access.canRead(principal, batch))
                 .<ResponseEntity<?>>map(batch -> ResponseEntity.ok(HarvestBatchResourceFromEntityAssembler.toResourceFromEntity(batch)))
                 .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
                         ApplicationError.notFound("HarvestBatch", harvestBatchId.toString())));
@@ -89,7 +103,9 @@ public class HarvestBatchesController {
     @Operation(summary = "Weigh a harvest batch")
     @PostMapping("{harvestBatchId}/weight")
     public ResponseEntity<?> weighHarvestBatch(@PathVariable Long harvestBatchId,
-                                               @RequestBody WeighHarvestBatchResource resource) {
+                                               @RequestBody WeighHarvestBatchResource resource,
+                                               @AuthenticationPrincipal UserDetailsImpl principal) {
+        if (!access.managesBatch(principal, harvestBatchId)) return ResponseEntity.notFound().build();
         var command = WeighHarvestBatchCommandFromResourceAssembler.toCommandFromResource(harvestBatchId, resource);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 harvestBatchCommandService.handle(command),
@@ -107,7 +123,9 @@ public class HarvestBatchesController {
     @Operation(summary = "Extract a representative sample")
     @PostMapping("{harvestBatchId}/sample")
     public ResponseEntity<?> extractRepresentativeSample(@PathVariable Long harvestBatchId,
-                                                         @RequestBody ExtractRepresentativeSampleResource resource) {
+                                                         @RequestBody ExtractRepresentativeSampleResource resource,
+                                               @AuthenticationPrincipal UserDetailsImpl principal) {
+        if (!access.managesBatch(principal, harvestBatchId)) return ResponseEntity.notFound().build();
         var command = ExtractRepresentativeSampleCommandFromResourceAssembler.toCommandFromResource(harvestBatchId, resource);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 harvestBatchCommandService.handle(command),
@@ -125,7 +143,9 @@ public class HarvestBatchesController {
     @Operation(summary = "Grade potato calibers")
     @PostMapping("{harvestBatchId}/potato-calibers")
     public ResponseEntity<?> gradePotatoCalibers(@PathVariable Long harvestBatchId,
-                                                 @RequestBody GradePotatoCalibersResource resource) {
+                                                 @RequestBody GradePotatoCalibersResource resource,
+                                               @AuthenticationPrincipal UserDetailsImpl principal) {
+        if (!access.managesBatch(principal, harvestBatchId)) return ResponseEntity.notFound().build();
         var command = GradePotatoCalibersCommandFromResourceAssembler.toCommandFromResource(harvestBatchId, resource);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 harvestBatchCommandService.handle(command),
@@ -142,7 +162,9 @@ public class HarvestBatchesController {
      */
     @Operation(summary = "Record a coffee cupping")
     @PostMapping("{harvestBatchId}/coffee-cupping")
-    public ResponseEntity<?> cupCoffee(@PathVariable Long harvestBatchId, @RequestBody CupCoffeeResource resource) {
+    public ResponseEntity<?> cupCoffee(@PathVariable Long harvestBatchId, @RequestBody CupCoffeeResource resource,
+                                               @AuthenticationPrincipal UserDetailsImpl principal) {
+        if (!access.managesBatch(principal, harvestBatchId)) return ResponseEntity.notFound().build();
         var command = CupCoffeeCommandFromResourceAssembler.toCommandFromResource(harvestBatchId, resource);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 harvestBatchCommandService.handle(command),

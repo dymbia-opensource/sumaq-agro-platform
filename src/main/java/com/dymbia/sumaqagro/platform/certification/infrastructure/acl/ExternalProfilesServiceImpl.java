@@ -1,7 +1,8 @@
 package com.dymbia.sumaqagro.platform.certification.infrastructure.acl;
 
 import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalProfilesService;
-import jakarta.persistence.EntityManager;
+import com.dymbia.sumaqagro.platform.profiles.application.queryservices.CooperativeQueryService;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetCooperativeMembersByCooperativeIdQuery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ExternalProfilesServiceImpl implements ExternalProfilesService {
 
-    private final EntityManager entityManager;
+    private final CooperativeQueryService cooperatives;
 
-    public ExternalProfilesServiceImpl(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public ExternalProfilesServiceImpl(CooperativeQueryService cooperatives) {
+        this.cooperatives = cooperatives;
     }
 
     @Override
@@ -26,13 +27,7 @@ public class ExternalProfilesServiceImpl implements ExternalProfilesService {
         if (cooperativeId == null || cooperativeId <= 0 || memberId == null || memberId <= 0) {
             throw new IllegalArgumentException("Cooperative id and member id must be greater than zero");
         }
-        Long matches = entityManager.createQuery(
-                        "select count(member) from CooperativeMember member "
-                                + "where member.id = :memberId and member.cooperative.id = :cooperativeId",
-                        Long.class)
-                .setParameter("memberId", memberId)
-                .setParameter("cooperativeId", cooperativeId)
-                .getSingleResult();
-        return matches > 0;
+        return cooperatives.handle(new GetCooperativeMembersByCooperativeIdQuery(cooperativeId)).stream()
+                .anyMatch(member -> memberId.equals(member.getId()) && member.isActive());
     }
 }

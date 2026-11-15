@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.certification.domain.repositories;
 
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -11,6 +12,10 @@ import java.util.Optional;
  * @since 1.0
  */
 public interface HarvestBatchRepository {
+
+    List<HarvestBatch> findByCooperativeId(Long cooperativeId);
+
+    List<HarvestBatch> findByCooperativeIdAndMemberIdIn(Long cooperativeId, List<Long> memberIds);
 
     /**
      * Finds a harvest batch by its id.

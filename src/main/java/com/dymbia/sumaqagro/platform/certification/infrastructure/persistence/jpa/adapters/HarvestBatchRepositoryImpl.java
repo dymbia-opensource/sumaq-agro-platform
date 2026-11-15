@@ -7,6 +7,7 @@ import com.dymbia.sumaqagro.platform.certification.infrastructure.persistence.jp
 import com.dymbia.sumaqagro.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,6 +25,18 @@ public class HarvestBatchRepositoryImpl implements HarvestBatchRepository {
                                       DomainEventPublisher domainEventPublisher) {
         this.harvestBatchPersistenceRepository = harvestBatchPersistenceRepository;
         this.domainEventPublisher = domainEventPublisher;
+    }
+
+    @Override
+    public List<HarvestBatch> findByCooperativeId(Long cooperativeId) {
+        return harvestBatchPersistenceRepository.findByCooperativeIdOrderByIdDesc(cooperativeId)
+                .stream().map(HarvestBatchPersistenceAssembler::toDomainFromPersistence).toList();
+    }
+
+    @Override
+    public List<HarvestBatch> findByCooperativeIdAndMemberIdIn(Long cooperativeId, List<Long> memberIds) {
+        return harvestBatchPersistenceRepository.findByCooperativeIdAndMemberIdInOrderByIdDesc(cooperativeId, memberIds)
+                .stream().map(HarvestBatchPersistenceAssembler::toDomainFromPersistence).toList();
     }
 
     @Override

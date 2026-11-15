@@ -17,6 +17,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.dymbia.sumaqagro.platform.certification.domain.repositories.QualityCertificateRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +41,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @Tag(name = "Quality Certificates", description = "Quality certificate issuance, lookup and revocation")
 public class QualityCertificatesController {
 
+    private final CertificationAccess access;
+    private final QualityCertificateRepository certificates;
     private final QualityCertificateCommandService qualityCertificateCommandService;
     private final HarvestCertificationQueryService harvestCertificationQueryService;
     private final String publicBaseUrl;
@@ -45,10 +50,14 @@ public class QualityCertificatesController {
     public QualityCertificatesController(
             QualityCertificateCommandService qualityCertificateCommandService,
             HarvestCertificationQueryService harvestCertificationQueryService,
+            CertificationAccess access,
+            QualityCertificateRepository certificates,
             @Value("${sumaqagro.certification.public-base-url}") String publicBaseUrl) {
         this.qualityCertificateCommandService = qualityCertificateCommandService;
         this.harvestCertificationQueryService = harvestCertificationQueryService;
         this.publicBaseUrl = publicBaseUrl;
+        this.access = access;
+        this.certificates = certificates;
     }
 
     /**
@@ -59,7 +68,12 @@ public class QualityCertificatesController {
      */
     @Operation(summary = "Issue a quality certificate")
     @PostMapping
-    public ResponseEntity<?> issueQualityCertificate(@RequestBody IssueQualityCertificateResource resource) {
+    public ResponseEntity<?> issueQualityCertificate(@RequestBody IssueQualityCertificateResource resource,
+                                                       @AuthenticationPrincipal UserDetailsImpl principal) {
+        if (principal == null || !principal.getId().equals(resource.issuedByUserId())
+                || !access.managesBatch(principal, resource.harvestBatchId())) {
+            return ResponseEntity.status(403).build();
+        }
         var batch = harvestCertificationQueryService.handle(new GetHarvestBatchByIdQuery(resource.harvestBatchId()));
         if (batch.isEmpty()) {
             return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
@@ -97,8 +111,10 @@ public class QualityCertificatesController {
      */
     @Operation(summary = "Get a quality certificate by number")
     @GetMapping
-    public ResponseEntity<?> getQualityCertificateByNumber(@RequestParam String certificateNumber) {
+    public ResponseEntity<?> getQualityCertificateByNumber(@RequestParam String certificateNumber,
+                                                             @AuthenticationPrincipal UserDetailsImpl principal) {
         return harvestCertificationQueryService.handle(new GetQualityCertificateByNumberQuery(certificateNumber))
+                .filter(certificate -> access.canReadBatch(principal, certificate.getHarvestBatchId()))
                 .<ResponseEntity<?>>map(certificate -> ResponseEntity.ok(
                         QualityCertificateResourceFromEntityAssembler.toResourceFromEntity(certificate)))
                 .orElseGet(() -> ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(
@@ -113,7 +129,12 @@ public class QualityCertificatesController {
      */
     @Operation(summary = "Revoke a quality certificate")
     @PostMapping("{qualityCertificateId}/revocation")
-    public ResponseEntity<?> revokeQualityCertificate(@PathVariable Long qualityCertificateId) {
+    public ResponseEntity<?> revokeQualityCertificate(@PathVariable Long qualityCertificateId,
+                                                        @AuthenticationPrincipal UserDetailsImpl principal) {
+        var certificate = certificates.findById(qualityCertificateId).orElse(null);
+        if (certificate == null || !access.managesBatch(principal, certificate.getHarvestBatchId())) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 qualityCertificateCommandService.handle(new RevokeQualityCertificateCommand(qualityCertificateId)),
                 QualityCertificateResourceFromEntityAssembler::toResourceFromEntity,

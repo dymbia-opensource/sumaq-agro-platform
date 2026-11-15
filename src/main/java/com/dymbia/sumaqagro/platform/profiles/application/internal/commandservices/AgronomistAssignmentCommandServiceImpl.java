@@ -10,8 +10,13 @@ import com.dymbia.sumaqagro.platform.profiles.domain.repositories.AgronomistAssi
 import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
+import com.dymbia.sumaqagro.platform.subscriptions.interfaces.acl.SubscriptionsContextFacade;
+
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignmentCommandService {
@@ -20,20 +25,24 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
     private final CooperativeRepository cooperativeRepository;
     private final ExternalFieldManagementService externalFieldManagementService;
     private final ExternalIamService externalIamService;
+    private final SubscriptionsContextFacade subscriptions;
 
     public AgronomistAssignmentCommandServiceImpl(AgronomistAssignmentRepository agronomistAssignmentRepository,
                                                   CooperativeRepository cooperativeRepository,
                                                   ExternalFieldManagementService externalFieldManagementService,
-                                                  ExternalIamService externalIamService) {
+                                                  ExternalIamService externalIamService,
+                                                  SubscriptionsContextFacade subscriptions) {
         this.agronomistAssignmentRepository = agronomistAssignmentRepository;
         this.cooperativeRepository = cooperativeRepository;
         this.externalFieldManagementService = externalFieldManagementService;
         this.externalIamService = externalIamService;
+        this.subscriptions = subscriptions;
+
     }
 
     // inherited javadoc
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Result<AgronomistAssignment, ApplicationError> handle(AssignAgronomistToPlotCommand command) {
         try {
             var cooperativeOptional = cooperativeRepository.findById(command.cooperativeId());
@@ -57,6 +66,10 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
                 return Result.failure(ApplicationError.conflict(
                         "AgronomistAssignment", "Plot already has an active agronomist assignment"));
             }
+            var quotaError = checkAdvisorQuota(command.agronomistUserId());
+            if (quotaError.isPresent()) {
+                return Result.failure(quotaError.get());
+            }
             var assignment = new AgronomistAssignment(command, producerUserId.get());
             return Result.success(agronomistAssignmentRepository.save(assignment));
         } catch (IllegalArgumentException e) {
@@ -68,7 +81,7 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
 
     // inherited javadoc
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Result<AgronomistAssignment, ApplicationError> handle(ReassignAgronomistToPlotCommand command) {
         try {
             var assignmentOptional = agronomistAssignmentRepository.findById(command.assignmentId());
@@ -80,12 +93,38 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
                 return Result.failure(ApplicationError.validationError(
                         "agronomistUserId", "The user is not registered as an agronomist"));
             }
-            var assignment = assignmentOptional.get().reassignTo(command.agronomistUserId());
+            var current = assignmentOptional.get();
+            if (!command.agronomistUserId().equals(current.getAgronomistUserId())) {
+                var quotaError = checkAdvisorQuota(command.agronomistUserId());
+                if (quotaError.isPresent()) {
+                    return Result.failure(quotaError.get());
+                }
+            }
+            var assignment = current.reassignTo(command.agronomistUserId());
             return Result.success(agronomistAssignmentRepository.save(assignment));
         } catch (IllegalArgumentException e) {
             return Result.failure(ApplicationError.validationError("AgronomistAssignment", e.getMessage()));
         } catch (Exception e) {
             return Result.failure(ApplicationError.unexpected("Reassign agronomist", e.getMessage()));
         }
+    }
+
+    private Optional<ApplicationError> checkAdvisorQuota(Long agronomistUserId) {
+        var limit = subscriptions.lockAdvisorPlotLimit(agronomistUserId);
+        if (limit.isEmpty()) {
+            return Optional.of(ApplicationError.businessRuleViolation(
+                    "technical-advisor-plan-required",
+                    "A current Technical Advisor subscription is required"));
+        }
+
+        long activeAssignments =
+                agronomistAssignmentRepository.countActiveByAgronomistUserId(agronomistUserId);
+        if (activeAssignments >= limit.get()) {
+            return Optional.of(ApplicationError.businessRuleViolation(
+                    "advisor-plot-quota",
+                    "The agronomist has reached the active plot assignment limit"));
+        }
+
+        return Optional.empty();
     }
 }

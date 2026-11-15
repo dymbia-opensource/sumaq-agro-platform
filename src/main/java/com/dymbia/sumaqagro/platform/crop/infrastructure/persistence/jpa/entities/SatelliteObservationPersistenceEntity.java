@@ -11,6 +11,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,7 +22,8 @@ import java.time.Instant;
  * JPA persistence entity for satellite observations.
  */
 @Entity
-@Table(name = "satellite_observations")
+@Table(name = "satellite_observations", uniqueConstraints =
+        @UniqueConstraint(name = "uk_satellite_observations_import_key", columnNames = "import_key"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -51,4 +53,7 @@ public class SatelliteObservationPersistenceEntity
 
     @Column(nullable = true)
     private Double surfaceTempKelvin;
+
+    @Column(name = "import_key", length = 32)
+    private String importKey;
 }

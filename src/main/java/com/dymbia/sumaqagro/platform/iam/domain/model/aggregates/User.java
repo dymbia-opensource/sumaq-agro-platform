@@ -13,8 +13,17 @@ import java.util.Set;
 public class User extends AbstractDomainAggregateRoot<User> {
     private final Long id;
     private final EmailAddress email;
-    private final String passwordHash;
+    private String passwordHash;
     private final Set<Role> roles;
+
+    /** Replaces the hash after an authorized password reset. */
+    public void changePasswordHash(String newPasswordHash) {
+        Objects.requireNonNull(newPasswordHash, "Password hash is required");
+        if (newPasswordHash.isBlank()) {
+            throw new IllegalArgumentException("Password hash must not be blank");
+        }
+        passwordHash = newPasswordHash;
+    }
 
     public User(EmailAddress email, String passwordHash, Role role) {
         this(null, email, passwordHash, Set.of(role));

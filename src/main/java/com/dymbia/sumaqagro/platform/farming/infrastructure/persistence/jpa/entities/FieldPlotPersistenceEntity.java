@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.ent
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotBoundary;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotStatus;
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SoilTexture;
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.converters.PlotBoundaryAttributeConverter;
 import com.dymbia.sumaqagro.platform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 import jakarta.persistence.*;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * JPA persistence entity for field plots.
@@ -25,6 +27,12 @@ public class FieldPlotPersistenceEntity extends AuditableAbstractPersistenceEnti
 
     @Column(name = "owner_user_id", nullable = false)
     private Long ownerUserId;
+
+    @Column(name = "cooperative_id", updatable = false)
+    private Long cooperativeId;
+
+    @Column(name = "cooperative_member_id", updatable = false)
+    private Long cooperativeMemberId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -45,4 +53,18 @@ public class FieldPlotPersistenceEntity extends AuditableAbstractPersistenceEnti
     @Convert(converter = PlotBoundaryAttributeConverter.class)
     @Column(name = "boundary", columnDefinition = "TEXT")
     private PlotBoundary boundary;
+
+    // Soil analysis (SoilBaseline): the four columns are empty until it is recorded
+    @Column(name = "soil_ph", precision = 4, scale = 2)
+    private BigDecimal soilPh;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "soil_texture", length = 50)
+    private SoilTexture soilTexture;
+
+    @Column(name = "soil_organic_matter_percentage", precision = 5, scale = 2)
+    private BigDecimal soilOrganicMatterPercentage;
+
+    @Column(name = "soil_recorded_at")
+    private LocalDate soilRecordedAt;
 }

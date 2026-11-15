@@ -6,6 +6,8 @@ import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotBy
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.DelineatePlotBoundaryResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.FieldPlotResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.RegisterFieldPlotResource;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.SoilBaselineResource;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.RecordSoilBaselineCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.DelineatePlotBoundaryCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.FieldPlotResourceFromEntityAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.RegisterFieldPlotCommandFromResourceAssembler;
@@ -19,6 +21,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,7 +54,17 @@ public class FieldPlotsController {
      */
     @Operation(summary = "Register a field plot")
     @PostMapping
-    public ResponseEntity<?> registerFieldPlot(@RequestBody RegisterFieldPlotResource resource) {
+    public ResponseEntity<?> registerFieldPlot(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody RegisterFieldPlotResource resource
+    ) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        String requiredRole = resource.cooperativeId() == null ? "ROLE_FARMER" : "ROLE_COOPERATIVE_DIRECTOR";
+        if (principal.getAuthorities().stream()
+                .noneMatch(authority -> requiredRole.equals(authority.getAuthority()))
+                || !principal.getId().equals(resource.ownerUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var command = RegisterFieldPlotCommandFromResourceAssembler.toCommandFromResource(resource);
         return toResponseWithFieldPlot(fieldPlotCommandService.handle(command), HttpStatus.CREATED);
     }
@@ -87,14 +101,29 @@ public class FieldPlotsController {
      * Draws or redraws the polygon of a field plot.
      *
      * @param fieldPlotId the plot id
-     * @param resource    the vertices of the polygon
+     * @param resource    the coordinates of the polygon
      * @return 200 with the plot, or the problem detail of the error (400 or 404)
      */
-    @Operation(summary = "Delineate the boundary of a field plot")
-    @PutMapping("{fieldPlotId}/boundary")
+    @Operation(summary = "Delineate the polygon of a field plot")
+    @PutMapping("{fieldPlotId}/polygon")
     public ResponseEntity<?> delineateBoundary(@PathVariable Long fieldPlotId,
                                                @RequestBody DelineatePlotBoundaryResource resource) {
         var command = DelineatePlotBoundaryCommandFromResourceAssembler.toCommandFromResource(fieldPlotId, resource);
+        return toResponseWithFieldPlot(fieldPlotCommandService.handle(command), HttpStatus.OK);
+    }
+
+    /**
+     * Records the initial soil analysis of a field plot. A new analysis replaces the previous one.
+     *
+     * @param fieldPlotId the plot id
+     * @param resource    the soil analysis
+     * @return 200 with the plot, or the problem detail of the error (400 or 404)
+     */
+    @Operation(summary = "Record the soil baseline of a field plot")
+    @PutMapping("{fieldPlotId}/soil-baseline")
+    public ResponseEntity<?> recordSoilBaseline(@PathVariable Long fieldPlotId,
+                                                @RequestBody SoilBaselineResource resource) {
+        var command = RecordSoilBaselineCommandFromResourceAssembler.toCommandFromResource(fieldPlotId, resource);
         return toResponseWithFieldPlot(fieldPlotCommandService.handle(command), HttpStatus.OK);
     }
 

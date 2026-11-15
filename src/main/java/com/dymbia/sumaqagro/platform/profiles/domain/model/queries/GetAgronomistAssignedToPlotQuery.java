@@ -1,10 +1,7 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.queries;
 
 /**
- * Query to get the agronomist currently assigned to a plot.
- *
- * @param plotId identity of the plot
- * @since 1.0
+ * Query for the active assignment of a plot (used by Crop Health through the facade).
  */
 public record GetAgronomistAssignedToPlotQuery(Long plotId) {
     public GetAgronomistAssignedToPlotQuery {

@@ -1,69 +1,68 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.entities;
 
-import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Dni;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
-import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import jakarta.persistence.*;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 /**
- * Cooperative member entity (part of the Cooperative aggregate).
- * Represents a socio in the padrón of the cooperative.
+ * Member of a cooperative (entity inside the {@code Cooperative} aggregate).
+ *
+ * <p>A member is identified by its DNI inside the cooperative. {@code userId} links the member
+ * to an IAM account when the member has one; it may be {@code null}.</p>
  *
  * @since 1.0
  */
 @Getter
-@Entity
-@Table(name = "cooperative_members", uniqueConstraints = {
-        @UniqueConstraint(
-                columnNames = {"cooperative_id", "dni"},
-                name = CooperativeMember.COOPERATIVE_DNI_UNIQUE_CONSTRAINT
-        )
-})
-public class CooperativeMember extends AuditableAbstractAggregateRoot<CooperativeMember> {
-
-    public static final String COOPERATIVE_DNI_UNIQUE_CONSTRAINT = "uk_cooperative_members_cooperative_id_dni";
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class CooperativeMember {
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cooperative_id", nullable = false)
-    private Cooperative cooperative;
-
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "dni", nullable = false, length = 8))
+    private Long cooperativeId;
     private Dni dni;
-
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "firstName", column = @Column(name = "first_name", nullable = false, length = 100)),
-            @AttributeOverride(name = "lastName", column = @Column(name = "last_name", nullable = false, length = 100))
-    })
     private PersonName name;
-
-    @Column(nullable = false, length = 100)
     private String community;
-
-    @Column(name = "joined_at", nullable = false)
     private LocalDate joinedAt;
+    private boolean active;
+    private Long userId;
 
-    /** Required by JPA */
-    protected CooperativeMember() {}
-
-    public CooperativeMember(Cooperative cooperative,
+    public CooperativeMember(Long id,
+                             Long cooperativeId,
                              Dni dni,
                              PersonName name,
                              String community,
-                             LocalDate joinedAt) {
-        this.cooperative = cooperative;
-        this.dni = dni;
-        this.name = name;
-        this.community = community.trim();
+                             LocalDate joinedAt,
+                             boolean active,
+                             Long userId) {
+        this.id = id;
+        this.cooperativeId = cooperativeId;
+        this.dni = Objects.requireNonNull(dni, "dni must not be null");
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.community = Objects.requireNonNull(community, "community must not be null").trim();
         this.joinedAt = joinedAt != null ? joinedAt : LocalDate.now();
+        this.active = active;
+        if (userId != null && userId <= 0) {
+            throw new IllegalArgumentException("User id must be a positive number");
+        }
+        this.userId = userId;
+    }
+
+    public static CooperativeMember reconstitute(Long id,
+                                                 Long cooperativeId,
+                                                 Dni dni,
+                                                 PersonName name,
+                                                 String community,
+                                                 LocalDate joinedAt,
+                                                 boolean active,
+                                                 Long userId) {
+        return new CooperativeMember(id, cooperativeId, dni, name, community, joinedAt, active, userId);
+    }
+
+    public String getFullName() {
+        return name.getFullName();
+    }
+
+    public void deactivate() {
+        this.active = false;
     }
 }

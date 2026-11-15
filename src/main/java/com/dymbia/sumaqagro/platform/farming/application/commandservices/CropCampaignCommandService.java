@@ -1,10 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.application.commandservices;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.CloseCropCampaignCommand;
-import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RecordSowingDateCommand;
-import com.dymbia.sumaqagro.platform.farming.domain.model.commands.SelectCropTypeCommand;
-import com.dymbia.sumaqagro.platform.farming.domain.model.commands.SpecifySeedVarietyCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.StartCropCampaignCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.UpdateCropCampaignCommand;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 
@@ -21,28 +19,12 @@ public interface CropCampaignCommandService {
     Result<Long, ApplicationError> handle(StartCropCampaignCommand command);
 
     /**
-     * Changes the crop of a campaign in progress.
+     * Changes the crop type, the seed variety or the sowing date of a campaign in progress.
      *
-     * @param command the select crop type command
+     * @param command the update crop campaign command
      * @return the id of the campaign, or the error that stopped it
      */
-    Result<Long, ApplicationError> handle(SelectCropTypeCommand command);
-
-    /**
-     * Changes the seed variety of a campaign in progress.
-     *
-     * @param command the specify seed variety command
-     * @return the id of the campaign, or the error that stopped it
-     */
-    Result<Long, ApplicationError> handle(SpecifySeedVarietyCommand command);
-
-    /**
-     * Records the sowing date of a campaign in progress.
-     *
-     * @param command the record sowing date command
-     * @return the id of the campaign, or the error that stopped it
-     */
-    Result<Long, ApplicationError> handle(RecordSowingDateCommand command);
+    Result<Long, ApplicationError> handle(UpdateCropCampaignCommand command);
 
     /**
      * Finishes a campaign in progress.

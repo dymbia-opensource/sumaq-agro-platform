@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * A request body to delineate the boundary of a field plot
  *
- * @param vertices the vertices of the plot
+ * @param coordinates the coordinates of the plot polygon
  */
-public record DelineatePlotBoundaryResource(List<GeoCoordinateResource> vertices) {
+public record DelineatePlotBoundaryResource(List<GeoCoordinateResource> coordinates) {
 }

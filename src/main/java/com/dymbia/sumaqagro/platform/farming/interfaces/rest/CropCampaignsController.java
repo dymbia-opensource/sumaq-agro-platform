@@ -5,15 +5,11 @@ import com.dymbia.sumaqagro.platform.farming.application.queryservices.CropCampa
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.CropCampaign;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.CloseCropCampaignCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetCropCampaignByIdQuery;
-import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.RecordSowingDateResource;
-import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.SelectCropTypeResource;
-import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.SpecifySeedVarietyResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.StartCropCampaignResource;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources.UpdateCropCampaignResource;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.CropCampaignResourceFromEntityAssembler;
-import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.RecordSowingDateCommandFromResourceAssembler;
-import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.SelectCropTypeCommandFromResourceAssembler;
-import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.SpecifySeedVarietyCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.StartCropCampaignCommandFromResourceAssembler;
+import com.dymbia.sumaqagro.platform.farming.interfaces.rest.transform.UpdateCropCampaignCommandFromResourceAssembler;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import com.dymbia.sumaqagro.platform.shared.interfaces.rest.resources.MessageResource;
@@ -75,47 +71,18 @@ public class CropCampaignsController {
     }
 
     /**
-     * Changes the crop of a campaign in progress.
+     * Changes the crop type, the seed variety or the sowing date of a campaign in progress.
+     * Only the fields that are sent change; the sowing date starts the satellite monitoring (policy P4).
      *
      * @param cropCampaignId the campaign id
-     * @param resource       the new crop type
+     * @param resource       the fields to change
      * @return 200 with the campaign, or the problem detail of the error (400, 404 or 409)
      */
-    @Operation(summary = "Select the crop type of a crop campaign")
-    @PutMapping("{cropCampaignId}/crop-type")
-    public ResponseEntity<?> selectCropType(@PathVariable Long cropCampaignId,
-                                            @RequestBody SelectCropTypeResource resource) {
-        var command = SelectCropTypeCommandFromResourceAssembler.toCommandFromResource(cropCampaignId, resource);
-        return toResponseWithCropCampaign(cropCampaignCommandService.handle(command), HttpStatus.OK);
-    }
-
-    /**
-     * Changes the seed variety of a campaign in progress.
-     *
-     * @param cropCampaignId the campaign id
-     * @param resource       the new seed variety
-     * @return 200 with the campaign, or the problem detail of the error (400, 404 or 409)
-     */
-    @Operation(summary = "Specify the seed variety of a crop campaign")
-    @PutMapping("{cropCampaignId}/seed-variety")
-    public ResponseEntity<?> specifySeedVariety(@PathVariable Long cropCampaignId,
-                                                @RequestBody SpecifySeedVarietyResource resource) {
-        var command = SpecifySeedVarietyCommandFromResourceAssembler.toCommandFromResource(cropCampaignId, resource);
-        return toResponseWithCropCampaign(cropCampaignCommandService.handle(command), HttpStatus.OK);
-    }
-
-    /**
-     * Records the sowing date of a campaign in progress. It starts the satellite monitoring (policy P4).
-     *
-     * @param cropCampaignId the campaign id
-     * @param resource       the sowing date
-     * @return 200 with the campaign, or the problem detail of the error (400, 404 or 409)
-     */
-    @Operation(summary = "Record the sowing date of a crop campaign")
-    @PutMapping("{cropCampaignId}/sowing-date")
-    public ResponseEntity<?> recordSowingDate(@PathVariable Long cropCampaignId,
-                                              @RequestBody RecordSowingDateResource resource) {
-        var command = RecordSowingDateCommandFromResourceAssembler.toCommandFromResource(cropCampaignId, resource);
+    @Operation(summary = "Update a crop campaign")
+    @PatchMapping("{cropCampaignId}")
+    public ResponseEntity<?> updateCropCampaign(@PathVariable Long cropCampaignId,
+                                                @RequestBody UpdateCropCampaignResource resource) {
+        var command = UpdateCropCampaignCommandFromResourceAssembler.toCommandFromResource(cropCampaignId, resource);
         return toResponseWithCropCampaign(cropCampaignCommandService.handle(command), HttpStatus.OK);
     }
 

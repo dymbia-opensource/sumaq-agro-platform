@@ -14,7 +14,7 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Preferre
  * @since 1.0
  */
 public record UpdateProfileCommand(
-        Long userId,
+        Long profileId,
         String firstName,
         String lastName,
         String phoneNumber,
@@ -22,8 +22,8 @@ public record UpdateProfileCommand(
         PreferredLanguage preferredLanguage
 ) {
     public UpdateProfileCommand {
-        if (userId == null || userId <= 0) {
-            throw new IllegalArgumentException("User id must be a positive number");
+        if (profileId == null || profileId <= 0) {
+            throw new IllegalArgumentException("Profile id must be a positive number");
         }
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name must not be null or blank");

@@ -1,62 +1,73 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.model.entities;
 
-import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.EmailAddress;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.InvitationStatus;
-import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import jakarta.persistence.*;
-import lombok.Getter;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
- * Agronomist invitation entity (part of the Cooperative aggregate).
- * Stores the invitation sent by email to an agronomist.
+ * Invitation sent by a cooperative to an agronomist (entity inside the {@code Cooperative} aggregate).
  *
  * @since 1.0
  */
-@Getter
-@Entity
-@Table(name = "agronomist_invitations", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "invitation_token", name = AgronomistInvitation.TOKEN_UNIQUE_CONSTRAINT)
-})
-public class AgronomistInvitation extends AuditableAbstractAggregateRoot<AgronomistInvitation> {
-
-    public static final String TOKEN_UNIQUE_CONSTRAINT = "uk_agronomist_invitations_token";
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class AgronomistInvitation {
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cooperative_id", nullable = false)
-    private Cooperative cooperative;
-
-    @Column(nullable = false, length = 150)
-    private String email;
-
-    @Column(name = "invitation_token", nullable = false, length = 255)
+    private Long cooperativeId;
+    private EmailAddress email;
     private String invitationToken;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
     private InvitationStatus status;
-
-    @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 
-    /** Required by JPA */
-    protected AgronomistInvitation() {}
-
-    public AgronomistInvitation(Cooperative cooperative,
-                                String email,
+    public AgronomistInvitation(Long id,
+                                Long cooperativeId,
+                                EmailAddress email,
                                 String invitationToken,
                                 InvitationStatus status,
                                 Instant sentAt) {
-        this.cooperative = cooperative;
-        this.email = email;
-        this.invitationToken = invitationToken;
-        this.status = status;
-        this.sentAt = sentAt;
+        this.id = id;
+        this.cooperativeId = cooperativeId;
+        this.email = Objects.requireNonNull(email, "email must not be null");
+        this.invitationToken = Objects.requireNonNull(invitationToken, "invitationToken must not be null");
+        this.status = Objects.requireNonNull(status, "status must not be null");
+        this.sentAt = Objects.requireNonNull(sentAt, "sentAt must not be null");
+    }
+
+    public static AgronomistInvitation reconstitute(Long id,
+                                                    Long cooperativeId,
+                                                    EmailAddress email,
+                                                    String invitationToken,
+                                                    InvitationStatus status,
+                                                    Instant sentAt) {
+        return new AgronomistInvitation(id, cooperativeId, email, invitationToken, status, sentAt);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getCooperativeId() {
+        return cooperativeId;
+    }
+
+    public String getEmail() {
+        return email.address();
+    }
+
+    public EmailAddress getEmailValue() {
+        return email;
+    }
+
+    public String getInvitationToken() {
+        return invitationToken;
+    }
+
+    public InvitationStatus getStatus() {
+        return status;
+    }
+
+    public Instant getSentAt() {
+        return sentAt;
     }
 
     public void markAsAccepted() {

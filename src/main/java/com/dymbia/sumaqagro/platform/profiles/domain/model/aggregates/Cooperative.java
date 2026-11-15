@@ -3,120 +3,242 @@ package com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.AddCooperativeMemberCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.InviteAgronomistCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.RegisterCooperativeCommand;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.UpdateCooperativeCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.AgronomistInvitation;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.events.AgronomistInvitedEvent;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.events.CooperativeMemberAddedEvent;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.events.CooperativeRegisteredEvent;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Dni;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.InvitationStatus;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Ruc;
-import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-import jakarta.persistence.*;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.*;
+import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * Cooperative aggregate root.
- * Manages the cooperative data, its member registry and agronomist invitations.
+ * Cooperative aggregate root. Owns its members and its agronomist invitations.
+ *
+ * <p>No JPA annotation lives here; the tables are mapped by {@code CooperativePersistenceEntity},
+ * {@code CooperativeMemberPersistenceEntity} and {@code AgronomistInvitationPersistenceEntity}.</p>
  *
  * @since 1.0
  */
-@Getter
-@Entity
-@Table(name = "cooperatives", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "ruc", name = Cooperative.RUC_UNIQUE_CONSTRAINT)
-})
-public class Cooperative extends AuditableAbstractAggregateRoot<Cooperative> {
+public class Cooperative extends AbstractDomainAggregateRoot<Cooperative> {
 
-    public static final String RUC_UNIQUE_CONSTRAINT = "uk_cooperatives_ruc";
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Getter
     private Long id;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "ruc", nullable = false, length = 11))
+    @Getter
     private Ruc ruc;
 
-    @Column(name = "business_name", nullable = false, length = 150)
+    @Getter
     private String businessName;
 
-    @Column(nullable = false, length = 100)
+    @Getter
     private String region;
 
-    @Column(name = "manager_user_id", nullable = false)
+    @Getter
     private Long managerUserId;
 
-    @OneToMany(mappedBy = "cooperative", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CooperativeMember> members = new ArrayList<>();
+    private EmailAddress institutionalEmail;
 
-    @OneToMany(mappedBy = "cooperative", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AgronomistInvitation> invitations = new ArrayList<>();
+    @Getter
+    private String legalRepresentative;
 
-    /** Required by JPA */
-    protected Cooperative() {}
+    @Getter
+    private String headquartersAddress;
 
-    public Cooperative(RegisterCooperativeCommand command) {
-        this.ruc = new Ruc(command.ruc());
-        this.businessName = command.businessName().trim();
-        this.region = command.region().trim();
-        this.managerUserId = command.managerUserId();
+    private PhoneNumber switchboardPhone;
 
-        registerEvent(new CooperativeRegisteredEvent(null, this.ruc.value(), this.managerUserId));
+    private final List<CooperativeMember> members = new ArrayList<>();
+    private final List<AgronomistInvitation> invitations = new ArrayList<>();
+
+    public Cooperative(Long id,
+                       Ruc ruc,
+                       String businessName,
+                       String region,
+                       Long managerUserId,
+                       EmailAddress institutionalEmail,
+                       String legalRepresentative,
+                       String headquartersAddress,
+                       PhoneNumber switchboardPhone,
+                       List<CooperativeMember> members,
+                       List<AgronomistInvitation> invitations) {
+        this.id = id;
+        this.ruc = Objects.requireNonNull(ruc, "ruc must not be null");
+        this.businessName = requireText(businessName, "businessName");
+        this.region = requireText(region, "region");
+        this.managerUserId = Objects.requireNonNull(managerUserId, "managerUserId must not be null");
+        this.institutionalEmail = institutionalEmail;
+        this.legalRepresentative = optionalText(legalRepresentative);
+        this.headquartersAddress = optionalText(headquartersAddress);
+        this.switchboardPhone = switchboardPhone;
+        if (members != null) {
+            this.members.addAll(members);
+        }
+        if (invitations != null) {
+            this.invitations.addAll(invitations);
+        }
+    }
+
+    public static Cooperative reconstitute(Long id,
+                                           Ruc ruc,
+                                           String businessName,
+                                           String region,
+                                           Long managerUserId,
+                                           EmailAddress institutionalEmail,
+                                           String legalRepresentative,
+                                           String headquartersAddress,
+                                           PhoneNumber switchboardPhone,
+                                           List<CooperativeMember> members,
+                                           List<AgronomistInvitation> invitations) {
+        return new Cooperative(id, ruc, businessName, region, managerUserId, institutionalEmail,
+                legalRepresentative, headquartersAddress, switchboardPhone, members, invitations);
     }
 
     /**
-     * Adds a new member to the cooperative padrón.
-     *
-     * @param command member data
-     * @return the created member
+     * Registers a new cooperative (US-17). The four institutional fields are optional here.
+     * The {@code CooperativeRegisteredEvent} is registered after saving, in {@link #onRegistered()}.
      */
+    public Cooperative(RegisterCooperativeCommand command) {
+        this(null,
+                new Ruc(command.ruc()),
+                command.businessName(),
+                command.region(),
+                command.managerUserId(),
+                toEmailOrNull(command.institutionalEmail()),
+                command.legalRepresentative(),
+                command.headquartersAddress(),
+                toPhoneOrNull(command.switchboardPhone()),
+                null,
+                null);
+    }
+
+    /**
+     * Updates the institutional data shown in the cooperative settings view. All values are required.
+     */
+    public Cooperative updateInstitutionalData(UpdateCooperativeCommand command) {
+        Objects.requireNonNull(command, "command must not be null");
+        this.ruc = new Ruc(command.ruc());
+        this.businessName = requireText(command.businessName(), "businessName");
+        this.region = requireText(command.region(), "region");
+        this.institutionalEmail = new EmailAddress(command.institutionalEmail());
+        this.legalRepresentative = requireText(command.legalRepresentative(), "legalRepresentative");
+        this.headquartersAddress = requireText(command.headquartersAddress(), "headquartersAddress");
+        this.switchboardPhone = new PhoneNumber(command.switchboardPhone());
+        return this;
+    }
+
     public CooperativeMember addMember(AddCooperativeMemberCommand command) {
-        boolean alreadyExists = members.stream()
-                .anyMatch(m -> m.getDni().value().equals(command.dni()));
-        if (alreadyExists) {
+        Objects.requireNonNull(command, "command must not be null");
+        var dni = new Dni(command.dni());
+        if (findMemberByDni(dni.value()).isPresent()) {
             throw new IllegalArgumentException("A member with this DNI already exists in the cooperative");
         }
-
-        CooperativeMember member = new CooperativeMember(
-                this,
-                new Dni(command.dni()),
+        if (command.userId() != null && hasMemberWithUserId(command.userId())) {
+            throw new IllegalArgumentException("This user is already a member of the cooperative");
+        }
+        var member = new CooperativeMember(
+                null,
+                this.id,
+                dni,
                 new PersonName(command.firstName(), command.lastName()),
                 command.community(),
-                command.joinedAt()
-        );
+                command.joinedAt(),
+                true,
+                command.userId());
         members.add(member);
-
-        registerEvent(new CooperativeMemberAddedEvent(this.id, member.getDni().value()));
+        registerDomainEvent(new CooperativeMemberAddedEvent(this.id, member.getDni().value()));
         return member;
     }
 
-    /**
-     * Creates and registers an invitation for an agronomist.
-     *
-     * @param command invitation data
-     * @return the created invitation
-     */
     public AgronomistInvitation inviteAgronomist(InviteAgronomistCommand command) {
-        String token = UUID.randomUUID().toString();
-
-        AgronomistInvitation invitation = new AgronomistInvitation(
-                this,
-                command.email().trim().toLowerCase(),
+        Objects.requireNonNull(command, "command must not be null");
+        var token = UUID.randomUUID().toString();
+        var invitation = new AgronomistInvitation(
+                null,
+                this.id,
+                new EmailAddress(command.email()),
                 token,
                 InvitationStatus.PENDING,
-                Instant.now()
-        );
+                Instant.now());
         invitations.add(invitation);
-
-        registerEvent(new AgronomistInvitedEvent(this.id, invitation.getEmail(), token));
+        registerDomainEvent(new AgronomistInvitedEvent(this.id, invitation.getEmail(), token));
         return invitation;
+    }
+
+    public Optional<CooperativeMember> findMemberByDni(String dni) {
+        if (dni == null) return Optional.empty();
+        var value = dni.trim();
+        return members.stream().filter(member -> member.getDni().value().equals(value)).findFirst();
+    }
+
+    public Optional<AgronomistInvitation> findInvitationByToken(String invitationToken) {
+        return invitations.stream()
+                .filter(invitation -> invitation.getInvitationToken().equals(invitationToken))
+                .findFirst();
+    }
+
+    public boolean hasActiveMemberWithDni(String dni) {
+        return findMemberByDni(dni).map(CooperativeMember::isActive).orElse(false);
+    }
+
+    public boolean hasActiveMemberWithUserId(Long userId) {
+        return members.stream().anyMatch(member -> member.isActive() && userId.equals(member.getUserId()));
+    }
+
+    private boolean hasMemberWithUserId(Long userId) {
+        return members.stream().anyMatch(member -> userId.equals(member.getUserId()));
+    }
+
+    public List<CooperativeMember> getMembers() {
+        return Collections.unmodifiableList(members);
+    }
+
+    public List<AgronomistInvitation> getInvitations() {
+        return Collections.unmodifiableList(invitations);
+    }
+
+    public String getInstitutionalEmail() {
+        return institutionalEmail != null ? institutionalEmail.address() : null;
+    }
+
+    public EmailAddress getInstitutionalEmailValue() {
+        return institutionalEmail;
+    }
+
+    public String getSwitchboardPhone() {
+        return switchboardPhone != null ? switchboardPhone.value() : null;
+    }
+
+    public PhoneNumber getSwitchboardPhoneValue() {
+        return switchboardPhone;
+    }
+
+    /**
+     * Called by the repository after the first save, when the id already exists.
+     */
+    public void onRegistered() {
+        registerDomainEvent(new CooperativeRegisteredEvent(this.id, this.ruc.value(), this.managerUserId));
+    }
+
+    private static String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " must not be null or blank");
+        }
+        return value.trim();
+    }
+
+    private static String optionalText(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static EmailAddress toEmailOrNull(String value) {
+        return value == null || value.isBlank() ? null : new EmailAddress(value);
+    }
+
+    private static PhoneNumber toPhoneOrNull(String value) {
+        return value == null || value.isBlank() ? null : new PhoneNumber(value);
     }
 }

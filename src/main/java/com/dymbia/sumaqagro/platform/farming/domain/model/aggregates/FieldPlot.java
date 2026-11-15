@@ -4,6 +4,7 @@ import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterField
 import com.dymbia.sumaqagro.platform.farming.domain.model.events.PlotBoundaryDelineatedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotBoundary;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotStatus;
+import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SoilBaseline;
 import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import lombok.Getter;
 
@@ -28,6 +29,8 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
 
     private Long id;
     private Long ownerUserId;
+    private Long cooperativeId;
+    private Long cooperativeMemberId;
     private String name;
     private String region;
     private PlotStatus status;
@@ -35,6 +38,8 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     private String agroMonitoringPolygonId;
 
     private PlotBoundary boundary;
+
+    private SoilBaseline soilBaseline;
 
     private FieldPlot(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                       BigDecimal areaHectares, String agroMonitoringPolygonId) {
@@ -55,6 +60,8 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     public FieldPlot(RegisterFieldPlotCommand command) {
         this(null, command.ownerUserId(), command.name(), command.region(), PlotStatus.WITHOUT_POLYGON,
                 command.declaredAreaHectares(), null);
+        this.cooperativeId = command.cooperativeId();
+        this.cooperativeMemberId = command.cooperativeMemberId();
 
     }
 
@@ -69,13 +76,26 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
      * @param areaHectares            the area in hectares
      * @param agroMonitoringPolygonId the agromonitoring polygon id
      * @param boundary                the polygon of the plot, may be null
+     * @param soilBaseline            the soil analysis, may be null
      * @return the field plot with the store state
      */
     public static FieldPlot reconstitute(Long id, Long ownerUserId, String name, String region, PlotStatus status,
                                          BigDecimal areaHectares, String agroMonitoringPolygonId,
-                                         PlotBoundary boundary) {
+                                         PlotBoundary boundary, SoilBaseline soilBaseline) {
+        return reconstitute(id, ownerUserId, name, region, status, areaHectares,
+                agroMonitoringPolygonId, boundary, soilBaseline, null, null);
+    }
+
+    /** Restores a plot with its fixed cooperative member assignment, if any. */
+    public static FieldPlot reconstitute(Long id, Long ownerUserId, String name, String region, PlotStatus status,
+                                         BigDecimal areaHectares, String agroMonitoringPolygonId,
+                                         PlotBoundary boundary, SoilBaseline soilBaseline,
+                                         Long cooperativeId, Long cooperativeMemberId) {
         var fieldPlot = new FieldPlot(id, ownerUserId, name, region, status, areaHectares, agroMonitoringPolygonId);
+        fieldPlot.cooperativeId = cooperativeId;
+        fieldPlot.cooperativeMemberId = cooperativeMemberId;
         fieldPlot.boundary = boundary;
+        fieldPlot.soilBaseline = soilBaseline;
         return fieldPlot;
     }
 
@@ -126,5 +146,27 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
      */
     public boolean hasPolygon() {
         return boundary != null;
+    }
+
+    /**
+     * Records the initial soil analysis of the plot. A new analysis replaces the previous one.
+     *
+     * @param soilBaseline the soil analysis
+     * @throws IllegalArgumentException if the soil analysis is null
+     */
+    public void recordSoilBaseline(SoilBaseline soilBaseline) {
+        if (soilBaseline == null) {
+            throw new IllegalArgumentException("field.plot.error.soil.required");
+        }
+        this.soilBaseline = soilBaseline;
+    }
+
+    /**
+     * Checks if the soil analysis of the field plot was already recorded
+     *
+     * @return {@code true} if the field plot has a soil analysis, {@code false} otherwise
+     */
+    public boolean hasSoilBaseline() {
+        return soilBaseline != null;
     }
 }

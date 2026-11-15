@@ -5,6 +5,7 @@ import com.dymbia.sumaqagro.platform.iam.interfaces.rest.resources.Authenticated
 import com.dymbia.sumaqagro.platform.iam.interfaces.rest.resources.SignInResource;
 import com.dymbia.sumaqagro.platform.iam.interfaces.rest.transform.AuthenticatedUserResourceFromEntityAssembler;
 import com.dymbia.sumaqagro.platform.iam.interfaces.rest.transform.SignInCommandFromResourceAssembler;
+import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,8 +31,11 @@ public class TokensController {
 
     private final UserCommandService userCommandService;
 
-    public TokensController(UserCommandService userCommandService) {
+    private final ProfilesContextFacade profilesContextFacade;
+
+    public TokensController(UserCommandService userCommandService, ProfilesContextFacade profilesContextFacade) {
         this.userCommandService = userCommandService;
+        this.profilesContextFacade = profilesContextFacade;
     }
 
     /**
@@ -56,7 +60,8 @@ public class TokensController {
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 result,
                 auth -> AuthenticatedUserResourceFromEntityAssembler.toResourceFromEntity(
-                        auth.getLeft(), auth.getRight()
+                        auth.getLeft(), auth.getRight(),
+                        profilesContextFacade.fetchFullNameByUserId(auth.getLeft().getId()).orElse(null)
                 ),
                 HttpStatus.OK
         );

@@ -14,6 +14,8 @@ public final class RegisterFieldPlotCommandFromResourceAssembler {
                 resource.ownerUserId(),
                 resource.name(),
                 resource.region(),
-                resource.areaHectares());
+                resource.areaHectares(),
+                resource.cooperativeId(),
+                resource.cooperativeMemberId());
     }
 }

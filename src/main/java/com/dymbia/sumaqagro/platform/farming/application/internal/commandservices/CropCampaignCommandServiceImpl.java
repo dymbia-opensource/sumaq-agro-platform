@@ -3,10 +3,8 @@ package com.dymbia.sumaqagro.platform.farming.application.internal.commandservic
 import com.dymbia.sumaqagro.platform.farming.application.commandservices.CropCampaignCommandService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.CropCampaign;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.CloseCropCampaignCommand;
-import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RecordSowingDateCommand;
-import com.dymbia.sumaqagro.platform.farming.domain.model.commands.SelectCropTypeCommand;
-import com.dymbia.sumaqagro.platform.farming.domain.model.commands.SpecifySeedVarietyCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.StartCropCampaignCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.commands.UpdateCropCampaignCommand;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CampaignStatus;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.FieldPlotId;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.CropCampaignRepository;
@@ -63,22 +61,26 @@ public class CropCampaignCommandServiceImpl implements CropCampaignCommandServic
         return Result.success(cropCampaign.getId());
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Each value that is present goes through its method of the aggregate, so the sowing date
+     * still raises {@code SowingDateRecordedEvent} (policy P4) only when it is sent.
+     * </p>
+     */
     @Override
-    public Result<Long, ApplicationError> handle(SelectCropTypeCommand command) {
-        return changeCampaignInProgress(command.cropCampaignId(),
-                cropCampaign -> cropCampaign.selectCropType(command.cropType()));
-    }
-
-    @Override
-    public Result<Long, ApplicationError> handle(SpecifySeedVarietyCommand command) {
-        return changeCampaignInProgress(command.cropCampaignId(),
-                cropCampaign -> cropCampaign.specifySeedVariety(command.seedVariety(), command.custom()));
-    }
-
-    @Override
-    public Result<Long, ApplicationError> handle(RecordSowingDateCommand command) {
-        return changeCampaignInProgress(command.cropCampaignId(),
-                cropCampaign -> cropCampaign.recordSowingDate(command.sowingDate()));
+    public Result<Long, ApplicationError> handle(UpdateCropCampaignCommand command) {
+        return changeCampaignInProgress(command.cropCampaignId(), cropCampaign -> {
+            if (command.cropType() != null) {
+                cropCampaign.selectCropType(command.cropType());
+            }
+            if (command.seedVariety() != null) {
+                cropCampaign.specifySeedVariety(command.seedVariety(), command.customSeedVariety());
+            }
+            if (command.sowingDate() != null) {
+                cropCampaign.recordSowingDate(command.sowingDate());
+            }
+        });
     }
 
     @Override

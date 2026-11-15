@@ -11,13 +11,15 @@ import java.util.List;
  * @param email the account email
  * @param roles the assigned role names
  * @param token the signed access token
+ * @param fullName the name from the user profile, when present
  */
 @Schema(name = "AuthenticatedUserResponse", description = "Authenticated user and access token")
 public record AuthenticatedUserResource(
         Long id,
         String email,
         List<String> roles,
-        String token
+        String token,
+        String fullName
 ) {
 
     /**

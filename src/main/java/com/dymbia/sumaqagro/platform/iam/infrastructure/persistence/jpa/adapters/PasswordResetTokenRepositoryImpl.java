@@ -7,10 +7,16 @@ import com.dymbia.sumaqagro.platform.iam.infrastructure.persistence.jpa.reposito
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.time.Instant;
 
 /** Implements reset token storage through Spring Data JPA. */
 @Repository
 public class PasswordResetTokenRepositoryImpl implements PasswordResetTokenRepository {
+
+    @Override
+    public boolean consumeIfUsable(String tokenHash, Instant consumedAt) {
+        return persistenceRepository.consumeIfUsable(tokenHash, consumedAt) == 1;
+    }
 
     private final PasswordResetTokenPersistenceRepository persistenceRepository;
 

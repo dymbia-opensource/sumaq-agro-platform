@@ -60,4 +60,15 @@ public final class PasswordResetToken {
         }
         consumedAt = now;
     }
+
+    /**
+     * Restores a stored token, including its consumption state.
+     */
+    public static PasswordResetToken reconstitute(
+            long userId, String tokenHash, Instant expiresAt, Instant consumedAt
+    ) {
+        var token = new PasswordResetToken(userId, tokenHash, expiresAt);
+        token.consumedAt = consumedAt;
+        return token;
+    }
 }

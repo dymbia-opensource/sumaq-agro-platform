@@ -69,7 +69,9 @@ public class WebSecurityConfiguration {
                                 "/api/v1/satellite-observations", "/api/v1/satellite-observations/**",
                                 "/api/v1/climate-forecasts", "/api/v1/climate-forecasts/**",
                                 "/api/v1/agroclimatic-alerts", "/api/v1/agroclimatic-alerts/**",
-                                "/api/v1/regional-bulletins", "/api/v1/regional-bulletins/**").permitAll()
+                                "/api/v1/regional-bulletins", "/api/v1/regional-bulletins/**",
+                                "/api/v1/authentication/password-recovery/request",
+                                "/api/v1/authentication/password-recovery/reset").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(bearerFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

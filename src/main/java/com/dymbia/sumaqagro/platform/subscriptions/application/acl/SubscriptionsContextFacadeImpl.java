@@ -43,6 +43,13 @@ public class SubscriptionsContextFacadeImpl implements SubscriptionsContextFacad
         return findCurrentPlanForUpdate(userId, PlanCode.COOPERATIVE_PRO).map(Plan::getRegisteredPlotLimit);
     }
 
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Integer> lockAdvisorPlotLimit(long userId) {
+        return findCurrentPlanForUpdate(userId, PlanCode.TECHNICAL_ADVISOR)
+                .map(Plan::getSupervisedPlotLimit);
+    }
+
     private Optional<Plan> findCurrentPlanForUpdate(long userId, PlanCode code) {
         return subscriptions.findByUserIdForUpdate(userId)
                 .filter(subscription -> subscription.getPlanCode() == code)

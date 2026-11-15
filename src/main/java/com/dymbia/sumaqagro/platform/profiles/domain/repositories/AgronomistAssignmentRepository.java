@@ -54,4 +54,10 @@ public interface AgronomistAssignmentRepository {
      * @return the saved assignment, with its id
      */
     AgronomistAssignment save(AgronomistAssignment assignment);
+
+
+    /**
+     * Counts the advisor's active assignments across all cooperatives.
+     */
+    long countActiveByAgronomistUserId(Long agronomistUserId);
 }

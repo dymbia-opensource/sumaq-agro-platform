@@ -86,6 +86,12 @@ public class AgronomistAssignmentRepositoryImpl implements AgronomistAssignmentR
         return savedAssignment;
     }
 
+    @Override
+    public long countActiveByAgronomistUserId(Long agronomistUserId) {
+        return agronomistAssignmentPersistenceRepository
+                .countByAgronomistUserIdAndActiveTrue(agronomistUserId);
+    }
+
     private static List<AgronomistAssignment> toDomain(List<AgronomistAssignmentPersistenceEntity> entities) {
         return entities.stream()
                 .map(AgronomistAssignmentPersistenceAssembler::toDomainFromPersistence)

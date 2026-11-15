@@ -22,4 +22,6 @@ public interface AgronomistAssignmentPersistenceRepository
     List<AgronomistAssignmentPersistenceEntity> findAllByPlotId(Long plotId);
 
     boolean existsByPlotIdAndActiveTrue(Long plotId);
+
+    long countByAgronomistUserIdAndActiveTrue(Long agronomistUserId);
 }

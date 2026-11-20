@@ -23,6 +23,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
 
     private static final String MESSAGES_BASENAME = "messages";
     private static final String ERROR_TYPE_PREFIX = "/api/v1/errors/";
+    private static final ResourceBundle.Control NO_FALLBACK_CONTROL =
+            ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES);
 
     private ProblemDetailFromApplicationErrorAssembler() {
     }
@@ -123,10 +125,17 @@ public final class ProblemDetailFromApplicationErrorAssembler {
         return "resource";
     }
 
+    /**
+     * Resolves a message of the request locale.
+     * <p>
+     * The lookup never falls back to the default locale of the JVM: a request in English
+     * must be answered from {@code messages.properties} even on a machine configured in Spanish.
+     * </p>
+     */
     private static @Nullable String toLocalizedMessageOrNull(String key, Object... args) {
         Locale locale = LocaleContextHolder.getLocale();
         try {
-            ResourceBundle bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, locale);
+            ResourceBundle bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, locale, NO_FALLBACK_CONTROL);
             if (!bundle.containsKey(key)) {
                 return null;
             }
@@ -138,17 +147,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
     }
 
     private static String toLocalizedMessageWithFallback(String key, String fallback, Object... args) {
-        Locale locale = LocaleContextHolder.getLocale();
-        try {
-            ResourceBundle bundle = ResourceBundle.getBundle(MESSAGES_BASENAME, locale);
-            if (!bundle.containsKey(key)) {
-                return fallback;
-            }
-            String template = bundle.getString(key);
-            return MessageFormat.format(template, args);
-        } catch (MissingResourceException ex) {
-            return fallback;
-        }
+        String message = toLocalizedMessageOrNull(key, args);
+        return message != null ? message : fallback;
     }
 
     /**
@@ -159,7 +159,8 @@ public final class ProblemDetailFromApplicationErrorAssembler {
      */
     public static HttpStatusCode toStatusFromErrorCode(String errorCode) {
         return switch (errorCode) {
-            case "INVALID_CREDENTIALS" -> HttpStatus.UNAUTHORIZED;
+            case "INVALID_CREDENTIALS", "AUTHENTICATION_REQUIRED" -> HttpStatus.UNAUTHORIZED;
+            case "ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
             case "VALIDATION_ERROR" -> HttpStatus.BAD_REQUEST;
             case String s when s.endsWith("_NOT_FOUND") -> HttpStatus.NOT_FOUND;
             case "BUSINESS_RULE_VIOLATION" -> HttpStatusCode.valueOf(422);

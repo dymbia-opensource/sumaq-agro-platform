@@ -26,7 +26,7 @@ public record RegisterFieldPlotCommand(
     public RegisterFieldPlotCommand {
         if ((cooperativeId == null) != (cooperativeMemberId == null)
                 || (cooperativeId != null && (cooperativeId <= 0 || cooperativeMemberId <= 0))) {
-            throw new IllegalArgumentException("Valid cooperative and member IDs must be supplied together.");
+            throw new IllegalArgumentException("field.plot.error.cooperative.invalid");
         }
         if (ownerUserId == null || ownerUserId <= 0) {
             throw new IllegalArgumentException("field.plot.error.ownerUserId.invalid");

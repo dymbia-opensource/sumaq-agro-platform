@@ -17,7 +17,7 @@ public record FieldPlotId(Long fieldPlotId) {
      */
     public FieldPlotId {
         if (fieldPlotId == null || fieldPlotId <= 0) {
-            throw new IllegalArgumentException("crop.campaign.error.plotId.invalid");
+            throw new IllegalArgumentException("field.plot.error.id.invalid");
         }
     }
 }

@@ -5,7 +5,7 @@ package com.dymbia.sumaqagro.platform.farming.interfaces.acl;
  *
  * @since 1.0
  */
-public interface FieldManagementContextFacade {
+public interface FarmingContextFacade {
 
     /**
      * @return the owner user id of the plot, or {@code 0L} when the plot does not exist

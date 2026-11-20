@@ -2,6 +2,7 @@ package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.ass
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SoilBaseline;
+import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.embeddables.SoilBaselinePersistenceEmbeddable;
 import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.entities.FieldPlotPersistenceEntity;
 
 /**
@@ -28,7 +29,7 @@ public final class FieldPlotPersistenceAssembler {
                 entity.getAreaHectares(),
                 entity.getAgroMonitoringPolygonId(),
                 entity.getBoundary(),
-                toSoilBaseline(entity),
+                toDomainFromPersistence(entity.getSoilBaseline()),
                 entity.getCooperativeId(),
                 entity.getCooperativeMemberId());
     }
@@ -52,22 +53,20 @@ public final class FieldPlotPersistenceAssembler {
         entity.setAreaHectares(fieldPlot.getAreaHectares());
         entity.setAgroMonitoringPolygonId(fieldPlot.getAgroMonitoringPolygonId());
         entity.setBoundary(fieldPlot.getBoundary());
-        var soilBaseline = fieldPlot.getSoilBaseline();
-        if (soilBaseline != null) {
-            entity.setSoilPh(soilBaseline.ph());
-            entity.setSoilTexture(soilBaseline.texture());
-            entity.setSoilOrganicMatterPercentage(soilBaseline.organicMatterPercentage());
-            entity.setSoilRecordedAt(soilBaseline.recordedAt());
-        }
+        entity.setSoilBaseline(toPersistenceFromDomain(fieldPlot.getSoilBaseline()));
         return entity;
     }
 
-    // The four soil columns are empty until the analysis is recorded
-    private static SoilBaseline toSoilBaseline(FieldPlotPersistenceEntity entity) {
-        if (entity.getSoilPh() == null) {
-            return null;
-        }
-        return new SoilBaseline(entity.getSoilPh(), entity.getSoilTexture(),
-                entity.getSoilOrganicMatterPercentage(), entity.getSoilRecordedAt());
+    // The soil columns are empty until the analysis is recorded
+    private static SoilBaseline toDomainFromPersistence(SoilBaselinePersistenceEmbeddable value) {
+        return value == null || value.getPh() == null ? null
+                : new SoilBaseline(value.getPh(), value.getTexture(), value.getOrganicMatterPercentage(),
+                value.getRecordedAt());
+    }
+
+    private static SoilBaselinePersistenceEmbeddable toPersistenceFromDomain(SoilBaseline value) {
+        return value == null ? null
+                : new SoilBaselinePersistenceEmbeddable(value.ph(), value.texture(), value.organicMatterPercentage(),
+                value.recordedAt());
     }
 }

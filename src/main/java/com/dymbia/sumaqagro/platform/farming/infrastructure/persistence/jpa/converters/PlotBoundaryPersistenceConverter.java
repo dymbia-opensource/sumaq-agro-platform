@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  * @since 1.0
  */
 @Converter
-public class PlotBoundaryAttributeConverter implements AttributeConverter<PlotBoundary, String> {
+public class PlotBoundaryPersistenceConverter implements AttributeConverter<PlotBoundary, String> {
     @Override
     public String convertToDatabaseColumn(PlotBoundary attribute) {
         if (attribute == null) {

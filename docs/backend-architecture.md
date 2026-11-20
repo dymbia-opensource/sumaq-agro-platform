@@ -31,7 +31,7 @@ A typical write request flows from a REST controller to a command service. The s
 
 ## Communication Between Contexts
 
-Contexts use facades for capabilities that other modules need. For example, `ProfilesContextFacade` exposes profile and assignment information, and `FieldManagementContextFacade` exposes Farming capabilities. These contracts let consumers work without importing another context's persistence repositories.
+Contexts use facades for capabilities that other modules need. For example, `ProfilesContextFacade` exposes profile and assignment information, and `FarmingContextFacade` exposes Farming capabilities. These contracts let consumers work without importing another context's persistence repositories.
 
 Aggregates reference entities owned by other contexts through identifiers. For example, an agronomist assignment records the agronomist and plot IDs while Profiles owns the assignment lifecycle. Repository adapters that use `DomainEventPublisher` dispatch events recorded by aggregates during persistence.
 

@@ -8,7 +8,7 @@ import java.util.Optional;
  *
  * @since 1.0
  */
-public interface ExternalFieldManagementService {
+public interface ExternalFarmingService {
 
     /**
      * Reads the public origin of a plot.

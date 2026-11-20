@@ -1,7 +1,7 @@
 package com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects;
 
 /**
- * Identy of the crop campaign that owns a cost ledger
+ * Identity of the crop campaign that owns a cost ledger
  *
  * @param cropCampaignId the crop campaign id
  * @since 1.0

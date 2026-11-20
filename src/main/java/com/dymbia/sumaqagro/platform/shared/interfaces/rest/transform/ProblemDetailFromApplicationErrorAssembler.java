@@ -45,10 +45,19 @@ public final class ProblemDetailFromApplicationErrorAssembler {
         problemDetail.setProperty("code", error.code());
 
         if (error.details() != null && !error.details().isBlank()) {
-            problemDetail.setProperty("details", error.details());
+            problemDetail.setProperty("details", toLocalizedDetails(error.details()));
         }
 
         return problemDetail;
+    }
+
+    /**
+     * Translates the details when they are a message key, such as {@code crop.campaign.error.finished}.
+     * Plain text details are returned as they are.
+     */
+    private static String toLocalizedDetails(String details) {
+        String localizedDetails = toLocalizedMessageOrNull(details);
+        return localizedDetails != null ? localizedDetails : details;
     }
 
     /**

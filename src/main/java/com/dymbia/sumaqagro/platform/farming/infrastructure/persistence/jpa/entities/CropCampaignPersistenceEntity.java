@@ -3,7 +3,7 @@ package com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.ent
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CampaignStatus;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CropType;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.SeedVariety;
-import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.converters.SeedVarietyAttributeConverter;
+import com.dymbia.sumaqagro.platform.farming.infrastructure.persistence.jpa.converters.SeedVarietyPersistenceConverter;
 import com.dymbia.sumaqagro.platform.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -35,7 +35,7 @@ public class CropCampaignPersistenceEntity extends AuditableAbstractPersistenceE
     @Column(name = "crop_type", nullable = false, length = 30)
     private CropType cropType;
 
-    @Convert(converter = SeedVarietyAttributeConverter.class)
+    @Convert(converter = SeedVarietyPersistenceConverter.class)
     @Column(name = "seed_variety", nullable = false, length = 60)
     private SeedVariety seedVariety;
 

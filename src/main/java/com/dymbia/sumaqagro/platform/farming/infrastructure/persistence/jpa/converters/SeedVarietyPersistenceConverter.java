@@ -10,7 +10,7 @@ import jakarta.persistence.Converter;
  * @since 1.0
  */
 @Converter
-public class SeedVarietyAttributeConverter implements AttributeConverter<SeedVariety, String> {
+public class SeedVarietyPersistenceConverter implements AttributeConverter<SeedVariety, String> {
 
     @Override
     public String convertToDatabaseColumn(SeedVariety attribute) {

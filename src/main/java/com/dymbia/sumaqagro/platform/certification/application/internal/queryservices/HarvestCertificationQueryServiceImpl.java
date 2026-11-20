@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.certification.application.internal.queryservices;
 
-import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFieldManagementService;
+import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.certification.application.queryservices.HarvestCertificationQueryService;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.QualityCertificate;
@@ -26,14 +26,14 @@ public class HarvestCertificationQueryServiceImpl implements HarvestCertificatio
 
     private final HarvestBatchRepository harvestBatchRepository;
     private final QualityCertificateRepository qualityCertificateRepository;
-    private final ExternalFieldManagementService externalFieldManagementService;
+    private final ExternalFarmingService externalFarmingService;
 
     public HarvestCertificationQueryServiceImpl(HarvestBatchRepository harvestBatchRepository,
                                                 QualityCertificateRepository qualityCertificateRepository,
-                                                ExternalFieldManagementService externalFieldManagementService) {
+                                                ExternalFarmingService externalFarmingService) {
         this.harvestBatchRepository = harvestBatchRepository;
         this.qualityCertificateRepository = qualityCertificateRepository;
-        this.externalFieldManagementService = externalFieldManagementService;
+        this.externalFarmingService = externalFarmingService;
     }
 
     @Override
@@ -58,7 +58,7 @@ public class HarvestCertificationQueryServiceImpl implements HarvestCertificatio
             return new PublicTraceability(certificate.getCertificateNumber(), certificate.getStatus(),
                     false, null, null, null, null, null);
         }
-        ExternalFieldManagementService.FieldOrigin origin = externalFieldManagementService
+        ExternalFarmingService.FieldOrigin origin = externalFarmingService
                 .findOriginByPlotId(batch.getPlotId())
                 .orElse(null);
         return new PublicTraceability(

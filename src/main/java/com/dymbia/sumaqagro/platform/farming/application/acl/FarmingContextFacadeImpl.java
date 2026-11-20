@@ -3,20 +3,20 @@ package com.dymbia.sumaqagro.platform.farming.application.acl;
 import com.dymbia.sumaqagro.platform.farming.application.queryservices.FieldPlotQueryService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotByIdQuery;
-import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FieldManagementContextFacade;
+import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FarmingContextFacade;
 import org.springframework.stereotype.Service;
 
 /**
- * Implementation of {@link FieldManagementContextFacade}. Uses only the query service.
+ * Implementation of {@link FarmingContextFacade}. Uses only the query service.
  *
  * @since 1.0
  */
 @Service
-public class FieldManagementContextFacadeImpl implements FieldManagementContextFacade {
+public class FarmingContextFacadeImpl implements FarmingContextFacade {
 
     private final FieldPlotQueryService fieldPlotQueryService;
 
-    public FieldManagementContextFacadeImpl(FieldPlotQueryService fieldPlotQueryService) {
+    public FarmingContextFacadeImpl(FieldPlotQueryService fieldPlotQueryService) {
         this.fieldPlotQueryService = fieldPlotQueryService;
     }
 

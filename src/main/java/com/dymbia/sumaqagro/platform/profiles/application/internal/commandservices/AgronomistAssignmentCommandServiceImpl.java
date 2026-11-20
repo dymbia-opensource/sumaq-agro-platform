@@ -1,7 +1,7 @@
 package com.dymbia.sumaqagro.platform.profiles.application.internal.commandservices;
 
 import com.dymbia.sumaqagro.platform.profiles.application.commandservices.AgronomistAssignmentCommandService;
-import com.dymbia.sumaqagro.platform.profiles.application.internal.outboundservices.acl.ExternalFieldManagementService;
+import com.dymbia.sumaqagro.platform.profiles.application.internal.outboundservices.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.profiles.application.internal.outboundservices.acl.ExternalIamService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.AgronomistAssignment;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.AssignAgronomistToPlotCommand;
@@ -23,18 +23,18 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
 
     private final AgronomistAssignmentRepository agronomistAssignmentRepository;
     private final CooperativeRepository cooperativeRepository;
-    private final ExternalFieldManagementService externalFieldManagementService;
+    private final ExternalFarmingService externalFarmingService;
     private final ExternalIamService externalIamService;
     private final SubscriptionsContextFacade subscriptions;
 
     public AgronomistAssignmentCommandServiceImpl(AgronomistAssignmentRepository agronomistAssignmentRepository,
                                                   CooperativeRepository cooperativeRepository,
-                                                  ExternalFieldManagementService externalFieldManagementService,
+                                                  ExternalFarmingService externalFarmingService,
                                                   ExternalIamService externalIamService,
                                                   SubscriptionsContextFacade subscriptions) {
         this.agronomistAssignmentRepository = agronomistAssignmentRepository;
         this.cooperativeRepository = cooperativeRepository;
-        this.externalFieldManagementService = externalFieldManagementService;
+        this.externalFarmingService = externalFarmingService;
         this.externalIamService = externalIamService;
         this.subscriptions = subscriptions;
 
@@ -49,7 +49,7 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
             if (cooperativeOptional.isEmpty()) {
                 return Result.failure(ApplicationError.notFound("Cooperative", command.cooperativeId().toString()));
             }
-            var producerUserId = externalFieldManagementService.fetchProducerUserIdByPlotId(command.plotId());
+            var producerUserId = externalFarmingService.fetchProducerUserIdByPlotId(command.plotId());
             if (producerUserId.isEmpty()) {
                 return Result.failure(ApplicationError.notFound("FieldPlot", command.plotId().toString()));
             }

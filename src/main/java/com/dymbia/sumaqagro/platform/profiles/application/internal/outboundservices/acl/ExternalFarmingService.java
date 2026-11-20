@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.profiles.application.internal.outboundservices.acl;
 
-import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FieldManagementContextFacade;
+import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FarmingContextFacade;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -11,12 +11,12 @@ import java.util.Optional;
  * @since 1.0
  */
 @Service
-public class ExternalFieldManagementService {
+public class ExternalFarmingService {
 
-    private final FieldManagementContextFacade fieldManagementContextFacade;
+    private final FarmingContextFacade farmingContextFacade;
 
-    public ExternalFieldManagementService(FieldManagementContextFacade fieldManagementContextFacade) {
-        this.fieldManagementContextFacade = fieldManagementContextFacade;
+    public ExternalFarmingService(FarmingContextFacade farmingContextFacade) {
+        this.farmingContextFacade = farmingContextFacade;
     }
 
     /**
@@ -24,7 +24,7 @@ public class ExternalFieldManagementService {
      */
     public Optional<Long> fetchProducerUserIdByPlotId(Long plotId) {
         if (plotId == null || plotId <= 0) return Optional.empty();
-        var ownerUserId = fieldManagementContextFacade.fetchOwnerUserIdByFieldPlotId(plotId);
+        var ownerUserId = farmingContextFacade.fetchOwnerUserIdByFieldPlotId(plotId);
         return ownerUserId == null || ownerUserId == 0L ? Optional.empty() : Optional.of(ownerUserId);
     }
 }

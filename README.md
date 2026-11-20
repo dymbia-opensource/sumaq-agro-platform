@@ -150,7 +150,7 @@ Registration accepts one role per account: `ROLE_FARMER`, `ROLE_COOPERATIVE_DIRE
 
 - **Commands and queries:** Command services handle writes. Query services handle reads.
 - **Domain and persistence:** In contexts with separate domain and JPA models, repository adapters implement the domain contracts and assemblers map between the two representations.
-- **Context boundaries:** Facades expose the capabilities that other contexts need. For example, Farming exposes field management operations through `FieldManagementContextFacade`.
+- **Context boundaries:** Facades expose the capabilities that other contexts need. For example, Farming exposes its field plot operations through `FarmingContextFacade`.
 - **Domain events:** Aggregates can record domain events. Repository adapters that use `DomainEventPublisher` dispatch them when saving the aggregate.
 - **REST errors:** Shared assemblers convert application failures into `ProblemDetail` responses. Message bundles provide English and Spanish translations.
 

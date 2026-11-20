@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.certification.infrastructure.acl;
 
-import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFieldManagementService;
+import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import org.springframework.stereotype.Service;
@@ -16,11 +16,11 @@ import java.util.Optional;
  */
 @Service
 @Transactional(readOnly = true)
-public class ExternalFieldManagementServiceImpl implements ExternalFieldManagementService {
+public class ExternalFarmingServiceImpl implements ExternalFarmingService {
 
     private final FieldPlotRepository fieldPlotRepository;
 
-    public ExternalFieldManagementServiceImpl(FieldPlotRepository fieldPlotRepository) {
+    public ExternalFarmingServiceImpl(FieldPlotRepository fieldPlotRepository) {
         this.fieldPlotRepository = fieldPlotRepository;
     }
 

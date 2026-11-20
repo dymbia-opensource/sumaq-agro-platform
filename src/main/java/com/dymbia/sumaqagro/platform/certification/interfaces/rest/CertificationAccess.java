@@ -2,7 +2,7 @@ package com.dymbia.sumaqagro.platform.certification.interfaces.rest;
 
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.repositories.HarvestBatchRepository;
-import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FieldManagementContextFacade;
+import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FarmingContextFacade;
 import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.CooperativeQueryService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
@@ -17,10 +17,10 @@ import java.util.List;
 public class CertificationAccess {
     private final HarvestBatchRepository batches;
     private final CooperativeQueryService cooperatives;
-    private final FieldManagementContextFacade fields;
+    private final FarmingContextFacade fields;
 
     public CertificationAccess(HarvestBatchRepository batches, CooperativeQueryService cooperatives,
-                               FieldManagementContextFacade fields) {
+                               FarmingContextFacade fields) {
         this.batches = batches;
         this.cooperatives = cooperatives;
         this.fields = fields;

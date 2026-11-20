@@ -1,6 +1,6 @@
 package com.dymbia.sumaqagro.platform.certification.application.queryservices;
 
-import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFieldManagementService;
+import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.QualityCertificate;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetHarvestBatchByIdQuery;
@@ -64,7 +64,7 @@ public interface HarvestCertificationQueryService {
             CropType cropType,
             QualityCategory qualityCategory,
             BigDecimal qualityScore,
-            ExternalFieldManagementService.FieldOrigin origin
+            ExternalFarmingService.FieldOrigin origin
     ) {
     }
 }

@@ -25,8 +25,8 @@ import java.util.function.Consumer;
 @Service
 public class CropCampaignCommandServiceImpl implements CropCampaignCommandService {
     private static final String CROP_CAMPAIGN = "CropCampaign";
-    private static final String CAMPAIGN_IN_PROGRESS_REASON = "The plot already has a campaign in progress.";
-    private static final String CAMPAIGN_FINISHED_REASON = "The campaign is finished and accepts no more changes.";
+    private static final String CAMPAIGN_IN_PROGRESS_REASON = "crop.campaign.error.inProgress";
+    private static final String CAMPAIGN_FINISHED_REASON = "crop.campaign.error.finished";
 
     private final CropCampaignRepository cropCampaignRepository;
     private final FieldPlotRepository fieldPlotRepository;
@@ -52,13 +52,14 @@ public class CropCampaignCommandServiceImpl implements CropCampaignCommandServic
                 CampaignStatus.IN_PROGRESS)) {
             return Result.failure(ApplicationError.conflict(CROP_CAMPAIGN, CAMPAIGN_IN_PROGRESS_REASON));
         }
-        var cropCampaign = new CropCampaign(command);
         try {
-            cropCampaign = cropCampaignRepository.save(cropCampaign);
+            var cropCampaign = cropCampaignRepository.save(new CropCampaign(command));
+            return Result.success(cropCampaign.getId());
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(ApplicationError.validationError(CROP_CAMPAIGN, exception.getMessage()));
         } catch (Exception exception) {
             return Result.failure(ApplicationError.unexpected("start-crop-campaign", exception.getMessage()));
         }
-        return Result.success(cropCampaign.getId());
     }
 
     /**
@@ -90,7 +91,8 @@ public class CropCampaignCommandServiceImpl implements CropCampaignCommandServic
 
     /**
      * Loads a campaign, applies a change through the aggregate and saves it.
-     * A missing campaign is {@code notFound} (404) and a finished one is a {@code conflict} (409).
+     * A missing campaign is {@code notFound} (404), a finished one is a {@code conflict} (409)
+     * and an invalid value rejected by the aggregate is a {@code validationError} (400).
      *
      * @param cropCampaignId the campaign id
      * @param change         the change to apply through a method of the aggregate
@@ -105,8 +107,16 @@ public class CropCampaignCommandServiceImpl implements CropCampaignCommandServic
         if (cropCampaign.get().isFinished()) {
             return Result.failure(ApplicationError.conflict(CROP_CAMPAIGN, CAMPAIGN_FINISHED_REASON));
         }
-        change.accept(cropCampaign.get());
-        cropCampaignRepository.save(cropCampaign.get());
-        return Result.success(cropCampaignId);
+        try {
+            change.accept(cropCampaign.get());
+            cropCampaignRepository.save(cropCampaign.get());
+            return Result.success(cropCampaignId);
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(ApplicationError.validationError(CROP_CAMPAIGN, exception.getMessage()));
+        } catch (IllegalStateException exception) {
+            return Result.failure(ApplicationError.conflict(CROP_CAMPAIGN, exception.getMessage()));
+        } catch (Exception exception) {
+            return Result.failure(ApplicationError.unexpected("change-crop-campaign", exception.getMessage()));
+        }
     }
 }

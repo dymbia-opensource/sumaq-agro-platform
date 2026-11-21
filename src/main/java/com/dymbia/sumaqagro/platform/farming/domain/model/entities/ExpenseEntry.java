@@ -1,4 +1,4 @@
-package com.dymbia.sumaqagro.platform.crop.domain.model.entities;
+package com.dymbia.sumaqagro.platform.farming.domain.model.entities;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.ExpenseCategory;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.Money;

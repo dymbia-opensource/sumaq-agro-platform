@@ -1,4 +1,4 @@
-package com.dymbia.sumaqagro.platform.crop.domain.model.commands;
+package com.dymbia.sumaqagro.platform.farming.domain.model.commands;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.YieldUnit;
 

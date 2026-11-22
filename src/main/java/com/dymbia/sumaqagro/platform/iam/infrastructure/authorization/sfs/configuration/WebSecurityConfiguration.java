@@ -60,6 +60,8 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/users", "/api/v1/tokens").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/traceability").permitAll()
+                        // Mercado Pago calls it without a token; the payment is re-read from Mercado Pago
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payment-notifications").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/authentication/password-recovery/request",
                                 "/api/v1/authentication/password-recovery/reset").permitAll()

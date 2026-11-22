@@ -10,10 +10,14 @@ import java.util.Optional;
  * <p>
  * It is the only class of Crop that knows the Farming context, and it only uses its public facade.
  * </p>
+ * <p>
+ * The bean has its own name because Profiles also has an {@code ExternalFarmingService}: two beans with the same
+ * default name stop the application from starting.
+ * </p>
  *
  * @since 1.1
  */
-@Service
+@Service("cropExternalFarmingService")
 public class ExternalFarmingService {
 
     private final FarmingContextFacade farmingContextFacade;

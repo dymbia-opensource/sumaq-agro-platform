@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.domain.model.aggregates;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.StartCropCampaignCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.CropCampaignClosedEvent;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.CropCampaignStartedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.events.SowingDateRecordedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CampaignStatus;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CropType;
@@ -63,5 +65,28 @@ class CropCampaignTests {
         var exception = assertThrows(IllegalArgumentException.class, () -> campaign.recordSowingDate(null));
 
         assertEquals("crop.campaign.error.sowingDate.required", exception.getMessage());
+    }
+
+    @Test
+    void startingRaisesTheCropCampaignStartedEventWithItsCropType() {
+        var campaign = CropCampaign.reconstitute(7L, new FieldPlotId(1L), "2026-I", CropType.SPECIALTY_COFFEE,
+                new SeedVariety("Caturra"), false, null, CampaignStatus.IN_PROGRESS);
+
+        campaign.onStarted();
+
+        var event = assertInstanceOf(CropCampaignStartedEvent.class, campaign.domainEvents().iterator().next());
+        assertEquals(7L, event.cropCampaignId());
+        assertEquals(CropType.SPECIALTY_COFFEE, event.cropType());
+    }
+
+    @Test
+    void closingRaisesTheCropCampaignClosedEvent() {
+        var campaign = CropCampaign.reconstitute(7L, new FieldPlotId(1L), "2026-I", CropType.ANDEAN_POTATO,
+                new SeedVariety("Yungay"), false, null, CampaignStatus.IN_PROGRESS);
+
+        campaign.close();
+
+        var event = assertInstanceOf(CropCampaignClosedEvent.class, campaign.domainEvents().iterator().next());
+        assertEquals(7L, event.cropCampaignId());
     }
 }

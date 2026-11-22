@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.domain.model.aggregates;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.StartCropCampaignCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.CropCampaignClosedEvent;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.CropCampaignStartedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.events.SowingDateRecordedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CampaignStatus;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CropType;
@@ -86,6 +88,14 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
     }
 
     /**
+     * Registers that the campaign started. It is called after the first save,
+     * when the campaign already has its id, so the cost ledger can be opened (US-36).
+     */
+    public void onStarted() {
+        registerDomainEvent(new CropCampaignStartedEvent(id, cropType));
+    }
+
+    /**
      * Changes the crop of the campaign.
      *
      * @param cropType the new crop type
@@ -123,12 +133,14 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
 
     /**
      * Finishes the campaign. After this it accepts no more changes.
+     * It raises {@link CropCampaignClosedEvent} so the cost ledger is frozen (US-35).
      *
      * @throws IllegalStateException when the campaign is already finished
      */
     public void close() {
         ensureInProgress();
         this.status = CampaignStatus.FINISHED;
+        registerDomainEvent(new CropCampaignClosedEvent(id));
     }
 
     /**

@@ -58,7 +58,7 @@ public class SatelliteObservationsController {
      * @param authenticatedUserId the ID of the authenticated user
      * @return a response entity containing the imported satellite observation resource
      */
-    @PostMapping(value = "/import", consumes = APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/imports", consumes = APPLICATION_JSON_VALUE)
     @Operation(summary = "Import the latest satellite observation in a date range",
             security = @SecurityRequirement(name = "sumaqAgroBearer"))
     public ResponseEntity<?> importSatelliteObservation(

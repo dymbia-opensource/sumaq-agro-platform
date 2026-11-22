@@ -7,7 +7,7 @@ import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHa
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetHarvestBatchByIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByHarvestBatchIdQuery;
-import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByNumberQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByIdQuery;
 import com.dymbia.sumaqagro.platform.certification.infrastructure.documents.PdfQrGeneratorAssembler;
 import com.dymbia.sumaqagro.platform.certification.interfaces.rest.resources.HarvestBatchResource;
 import com.dymbia.sumaqagro.platform.certification.interfaces.rest.resources.QualityCertificateResource;
@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,12 +62,14 @@ public class CertificationWorkspaceController {
                         .orElse(null))).toList());
     }
 
-    @GetMapping(value = "/quality-certificates/document", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> download(@RequestParam String certificateNumber,
+    // The PDF is a sub-resource of one certificate, so it hangs from the certificate id
+    @GetMapping(value = "/quality-certificates/{qualityCertificateId}/document",
+            produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> download(@PathVariable Long qualityCertificateId,
                                            @AuthenticationPrincipal UserDetailsImpl principal) {
         if (principal == null) return ResponseEntity.status(401).build();
-        if (certificateNumber == null || certificateNumber.isBlank()) return ResponseEntity.badRequest().build();
-        var certificate = queries.handle(new GetQualityCertificateByNumberQuery(certificateNumber)).orElse(null);
+        if (qualityCertificateId == null || qualityCertificateId <= 0) return ResponseEntity.notFound().build();
+        var certificate = queries.handle(new GetQualityCertificateByIdQuery(qualityCertificateId)).orElse(null);
         if (certificate == null) return ResponseEntity.notFound().build();
         var batch = queries.handle(new GetHarvestBatchByIdQuery(certificate.getHarvestBatchId())).orElse(null);
         if (batch == null || !access.canRead(principal, batch)) {

@@ -4,7 +4,11 @@ import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFarmi
 import com.dymbia.sumaqagro.platform.certification.application.queryservices.HarvestCertificationQueryService;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.QualityCertificate;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetHarvestBatchByIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByHarvestBatchIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByNumberQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByPublicHashQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.repositories.HarvestBatchRepository;
@@ -12,6 +16,7 @@ import com.dymbia.sumaqagro.platform.certification.domain.repositories.QualityCe
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -51,6 +56,27 @@ public class HarvestCertificationQueryServiceImpl implements HarvestCertificatio
         return qualityCertificateRepository.findByCertificateNumber(query.certificateNumber())
                 .flatMap(certificate -> harvestBatchRepository.findById(certificate.getHarvestBatchId())
                         .map(batch -> toPublicTraceability(certificate, batch, query.certificateHash())));
+    }
+
+    @Override
+    public List<HarvestBatch> handle(GetAllHarvestBatchesByCooperativeIdQuery query) {
+        return harvestBatchRepository.findByCooperativeId(query.cooperativeId());
+    }
+
+    @Override
+    public List<HarvestBatch> handle(GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery query) {
+        if (query.memberIds().isEmpty()) return List.of();
+        return harvestBatchRepository.findByCooperativeIdAndMemberIdIn(query.cooperativeId(), query.memberIds());
+    }
+
+    @Override
+    public Optional<QualityCertificate> handle(GetQualityCertificateByIdQuery query) {
+        return qualityCertificateRepository.findById(query.qualityCertificateId());
+    }
+
+    @Override
+    public Optional<QualityCertificate> handle(GetQualityCertificateByHarvestBatchIdQuery query) {
+        return qualityCertificateRepository.findByHarvestBatchId(query.harvestBatchId());
     }
 
     private PublicTraceability toPublicTraceability(QualityCertificate certificate, HarvestBatch batch, String presentedHash) {

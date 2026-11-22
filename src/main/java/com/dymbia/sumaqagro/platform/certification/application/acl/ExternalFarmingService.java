@@ -19,6 +19,14 @@ public interface ExternalFarmingService {
     Optional<FieldOrigin> findOriginByPlotId(Long plotId);
 
     /**
+     * Finds the producer that owns a plot.
+     *
+     * @param plotId the plot
+     * @return the owner user id, or empty when the plot does not exist
+     */
+    Optional<Long> fetchOwnerUserIdByPlotId(Long plotId);
+
+    /**
      * Public origin of a plot. The planted variety is absent when field management has no campaign for the plot.
      *
      * @param plotName    plot name

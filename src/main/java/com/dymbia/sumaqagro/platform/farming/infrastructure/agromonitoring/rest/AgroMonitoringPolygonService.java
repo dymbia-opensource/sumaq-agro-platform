@@ -8,11 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -25,13 +28,21 @@ public class AgroMonitoringPolygonService implements PolygonMonitoringService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AgroMonitoringPolygonService.class);
     private static final String API_KEY_PARAMETER = "appid";
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
 
     private final RestClient restClient;
     private final String apiKey;
 
-    public AgroMonitoringPolygonService(@Value("${agromonitoring.base-url}") String baseUrl, @Value("$" +
-            "{agromonitoring.api-key}") String apiKey) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+    public AgroMonitoringPolygonService(@Value("${agromonitoring.base-url}") String baseUrl, @Value("${agromonitoring"
+            + ".api-key}") String apiKey) {
+        // The polygon is registered inside the PUT request of the plot: without timeouts a slow provider
+        // would leave that request hanging. Same limits as the satellite imagery client of Crop.
+        var httpClient =
+                HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).followRedirects(HttpClient.Redirect.NEVER).build();
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(READ_TIMEOUT);
+        this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.apiKey = apiKey;
     }
 

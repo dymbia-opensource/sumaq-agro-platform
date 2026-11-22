@@ -1,27 +1,24 @@
 package com.dymbia.sumaqagro.platform.certification.infrastructure.acl;
 
 import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFarmingService;
-import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
-import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
+import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FarmingContextFacade;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
 /**
- * Reads the plot origin from field management.
- * Certification does not use the field plot aggregate outside this adapter.
+ * Reads the plot origin from the Farming context.
+ * It only uses {@link FarmingContextFacade}: certification never sees the field plot aggregate.
  *
  * @since 1.0
  */
 @Service
-@Transactional(readOnly = true)
 public class ExternalFarmingServiceImpl implements ExternalFarmingService {
 
-    private final FieldPlotRepository fieldPlotRepository;
+    private final FarmingContextFacade farmingContextFacade;
 
-    public ExternalFarmingServiceImpl(FieldPlotRepository fieldPlotRepository) {
-        this.fieldPlotRepository = fieldPlotRepository;
+    public ExternalFarmingServiceImpl(FarmingContextFacade farmingContextFacade) {
+        this.farmingContextFacade = farmingContextFacade;
     }
 
     @Override
@@ -29,10 +26,10 @@ public class ExternalFarmingServiceImpl implements ExternalFarmingService {
         if (plotId == null || plotId <= 0) {
             throw new IllegalArgumentException("Plot id must be greater than zero");
         }
-        return fieldPlotRepository.findById(plotId).map(this::toOrigin);
-    }
-
-    private FieldOrigin toOrigin(FieldPlot plot) {
-        return new FieldOrigin(plot.getName(), plot.getRegion(), null);
+        if (!farmingContextFacade.existsFieldPlotById(plotId)) {
+            return Optional.empty();
+        }
+        return Optional.of(new FieldOrigin(farmingContextFacade.fetchFieldPlotNameById(plotId),
+                farmingContextFacade.fetchFieldPlotRegionById(plotId), null));
     }
 }

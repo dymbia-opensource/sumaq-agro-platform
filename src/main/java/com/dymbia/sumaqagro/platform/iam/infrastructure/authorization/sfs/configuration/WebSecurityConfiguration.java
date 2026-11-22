@@ -60,14 +60,7 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/users", "/api/v1/tokens").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/traceability").permitAll()
-                        .requestMatchers(
-                                "/api/v1/pest-reports", "/api/v1/pest-reports/**",
-                                "/api/v1/field-inspections", "/api/v1/field-inspections/**",
-                                "/api/v1/technical-prescriptions", "/api/v1/technical-prescriptions/**",
-                                "/api/v1/satellite-observations", "/api/v1/satellite-observations/**",
-                                "/api/v1/climate-forecasts", "/api/v1/climate-forecasts/**",
-                                "/api/v1/agroclimatic-alerts", "/api/v1/agroclimatic-alerts/**",
-                                "/api/v1/regional-bulletins", "/api/v1/regional-bulletins/**",
+                        .requestMatchers(HttpMethod.POST,
                                 "/api/v1/authentication/password-recovery/request",
                                 "/api/v1/authentication/password-recovery/reset").permitAll()
                         .anyRequest().authenticated())

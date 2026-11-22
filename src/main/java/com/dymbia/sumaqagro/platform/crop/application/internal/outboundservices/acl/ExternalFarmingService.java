@@ -47,4 +47,15 @@ public class ExternalFarmingService {
         var polygonId = farmingContextFacade.fetchAgroMonitoringPolygonIdByFieldPlotId(plotId);
         return polygonId == null || polygonId.isBlank() ? Optional.empty() : Optional.of(polygonId);
     }
+
+    /**
+     * Finds the region of a field plot. Climate forecasts and alerts are grouped by region.
+     *
+     * @param plotId the field plot id
+     * @return the region, or empty when the plot does not exist
+     */
+    public Optional<String> fetchRegionByPlotId(Long plotId) {
+        var region = farmingContextFacade.fetchFieldPlotRegionById(plotId);
+        return region == null || region.isBlank() ? Optional.empty() : Optional.of(region);
+    }
 }

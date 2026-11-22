@@ -3,7 +3,11 @@ package com.dymbia.sumaqagro.platform.certification.application.queryservices;
 import com.dymbia.sumaqagro.platform.certification.application.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.QualityCertificate;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetHarvestBatchByIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByHarvestBatchIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByIdQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByNumberQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByPublicHashQuery;
 import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CertificateStatus;
@@ -11,6 +15,7 @@ import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.Cro
 import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.QualityCategory;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -43,6 +48,42 @@ public interface HarvestCertificationQueryService {
      * @return the public view, or empty when the certificate or its batch does not exist
      */
     Optional<PublicTraceability> handle(GetQualityCertificateByPublicHashQuery query);
+
+    /**
+     * Finds every harvest batch received by a cooperative.
+     *
+     * @param query cooperative id
+     * @return the batches, or an empty list
+     * @since 1.1
+     */
+    List<HarvestBatch> handle(GetAllHarvestBatchesByCooperativeIdQuery query);
+
+    /**
+     * Finds the harvest batches that some members delivered to a cooperative.
+     *
+     * @param query cooperative id and member ids
+     * @return the batches, or an empty list
+     * @since 1.1
+     */
+    List<HarvestBatch> handle(GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery query);
+
+    /**
+     * Finds a quality certificate by its id.
+     *
+     * @param query certificate id
+     * @return the certificate, or empty when it does not exist
+     * @since 1.1
+     */
+    Optional<QualityCertificate> handle(GetQualityCertificateByIdQuery query);
+
+    /**
+     * Finds the quality certificate of a harvest batch.
+     *
+     * @param query batch id
+     * @return the certificate, or empty when the batch is not certified
+     * @since 1.1
+     */
+    Optional<QualityCertificate> handle(GetQualityCertificateByHarvestBatchIdQuery query);
 
     /**
      * Public traceability of one certificate. {@code authentic} is false when the hash does not match or the certificate was revoked.

@@ -2,8 +2,12 @@ package com.dymbia.sumaqagro.platform.certification.interfaces.rest;
 
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CertificateStatus;
-import com.dymbia.sumaqagro.platform.certification.domain.repositories.HarvestBatchRepository;
-import com.dymbia.sumaqagro.platform.certification.domain.repositories.QualityCertificateRepository;
+import com.dymbia.sumaqagro.platform.certification.application.queryservices.HarvestCertificationQueryService;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetAllHarvestBatchesByCooperativeIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetHarvestBatchByIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByHarvestBatchIdQuery;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByNumberQuery;
 import com.dymbia.sumaqagro.platform.certification.infrastructure.documents.PdfQrGeneratorAssembler;
 import com.dymbia.sumaqagro.platform.certification.interfaces.rest.resources.HarvestBatchResource;
 import com.dymbia.sumaqagro.platform.certification.interfaces.rest.resources.QualityCertificateResource;
@@ -24,18 +28,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 public class CertificationWorkspaceController {
-    private final HarvestBatchRepository batches;
-    private final QualityCertificateRepository certificates;
+    private final HarvestCertificationQueryService queries;
     private final CertificationAccess access;
     private final String publicBaseUrl;
 
     public CertificationWorkspaceController(
-            HarvestBatchRepository batches,
-            QualityCertificateRepository certificates,
+            HarvestCertificationQueryService queries,
             CertificationAccess access,
             @Value("${sumaqagro.certification.public-base-url}") String publicBaseUrl) {
-        this.batches = batches;
-        this.certificates = certificates;
+        this.queries = queries;
         this.access = access;
         this.publicBaseUrl = publicBaseUrl;
     }
@@ -47,15 +48,15 @@ public class CertificationWorkspaceController {
         if (principal == null) return ResponseEntity.status(401).build();
         List<HarvestBatch> visible;
         if (access.directs(principal, cooperativeId)) {
-            visible = batches.findByCooperativeId(cooperativeId);
+            visible = queries.handle(new GetAllHarvestBatchesByCooperativeIdQuery(cooperativeId));
         } else {
             var memberIds = access.memberIds(principal, cooperativeId);
             if (memberIds.isEmpty()) return ResponseEntity.status(403).build();
-            visible = batches.findByCooperativeIdAndMemberIdIn(cooperativeId, memberIds);
+            visible = queries.handle(new GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery(cooperativeId, memberIds));
         }
         return ResponseEntity.ok(visible.stream().map(batch -> new BatchEntry(
                 HarvestBatchResourceFromEntityAssembler.toResourceFromEntity(batch),
-                certificates.findByHarvestBatchId(batch.getId())
+                queries.handle(new GetQualityCertificateByHarvestBatchIdQuery(batch.getId()))
                         .map(QualityCertificateResourceFromEntityAssembler::toResourceFromEntity)
                         .orElse(null))).toList());
     }
@@ -64,9 +65,10 @@ public class CertificationWorkspaceController {
     public ResponseEntity<byte[]> download(@RequestParam String certificateNumber,
                                            @AuthenticationPrincipal UserDetailsImpl principal) {
         if (principal == null) return ResponseEntity.status(401).build();
-        var certificate = certificates.findByCertificateNumber(certificateNumber).orElse(null);
+        if (certificateNumber == null || certificateNumber.isBlank()) return ResponseEntity.badRequest().build();
+        var certificate = queries.handle(new GetQualityCertificateByNumberQuery(certificateNumber)).orElse(null);
         if (certificate == null) return ResponseEntity.notFound().build();
-        var batch = batches.findById(certificate.getHarvestBatchId()).orElse(null);
+        var batch = queries.handle(new GetHarvestBatchByIdQuery(certificate.getHarvestBatchId())).orElse(null);
         if (batch == null || !access.canRead(principal, batch)) {
             return ResponseEntity.notFound().build();
         }

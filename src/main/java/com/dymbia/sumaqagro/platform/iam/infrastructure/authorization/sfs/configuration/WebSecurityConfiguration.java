@@ -59,9 +59,7 @@ public class WebSecurityConfiguration {
                 .authorizeHttpRequests(configurer -> configurer
                         .requestMatchers(HttpMethod.POST, "/api/v1/users", "/api/v1/tokens").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/field-plots").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/field-plots/*/polygon").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/field-plots/*", "/api/v1/public/traceability").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/traceability").permitAll()
                         .requestMatchers(
                                 "/api/v1/pest-reports", "/api/v1/pest-reports/**",
                                 "/api/v1/field-inspections", "/api/v1/field-inspections/**",

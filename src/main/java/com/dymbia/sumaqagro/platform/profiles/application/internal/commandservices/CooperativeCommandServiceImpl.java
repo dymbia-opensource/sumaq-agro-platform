@@ -115,7 +115,7 @@ public class CooperativeCommandServiceImpl implements CooperativeCommandService 
             var cooperative = cooperativeOptional.get();
             var invitation = cooperative.inviteAgronomist(command);
             var savedCooperative = cooperativeRepository.save(cooperative);
-            // TODO (en revisión con el equipo): enviar el correo de invitación con Brevo desde un event handler.
+            // The invitation email is sent by AgronomistInvitedEventHandler after this transaction commits
             return savedCooperative.findInvitationByToken(invitation.getInvitationToken())
                     .<Result<AgronomistInvitation, ApplicationError>>map(Result::success)
                     .orElseGet(() -> Result.failure(ApplicationError.notFound("AgronomistInvitation", invitation.getEmail())));

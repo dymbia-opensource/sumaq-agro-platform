@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.farming.interfaces.acl;
 
+import java.util.List;
+
 /**
  * Public entry point of the Farming context for other bounded contexts (Profiles, Crop, Certification).
  * <p>
@@ -35,4 +37,10 @@ public interface FarmingContextFacade {
      * @since 1.1
      */
     String fetchFieldPlotRegionById(Long fieldPlotId);
+
+    /**
+     * @return the producers that own at least one plot in the region, without repeats, or an empty list
+     * @since 1.1
+     */
+    List<Long> fetchOwnerUserIdsByRegion(String region);
 }

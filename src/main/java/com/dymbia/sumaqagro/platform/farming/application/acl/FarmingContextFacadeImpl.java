@@ -2,10 +2,12 @@ package com.dymbia.sumaqagro.platform.farming.application.acl;
 
 import com.dymbia.sumaqagro.platform.farming.application.queryservices.FieldPlotQueryService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
+import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetAllFieldPlotsByRegionQuery;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotByIdQuery;
 import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FarmingContextFacade;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -46,6 +48,15 @@ public class FarmingContextFacadeImpl implements FarmingContextFacade {
     @Override
     public String fetchFieldPlotRegionById(Long fieldPlotId) {
         return fetchText(fieldPlotId, FieldPlot::getRegion);
+    }
+
+    @Override
+    public List<Long> fetchOwnerUserIdsByRegion(String region) {
+        if (region == null || region.isBlank()) return List.of();
+        return fieldPlotQueryService.handle(new GetAllFieldPlotsByRegionQuery(region)).stream()
+                .map(FieldPlot::getOwnerUserId)
+                .distinct()
+                .toList();
     }
 
     // A missing plot or a missing value is an empty string, so the other contexts never receive null

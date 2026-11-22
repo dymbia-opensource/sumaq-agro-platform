@@ -85,9 +85,9 @@ public class ProfilesController {
         return ResponseEntity.ok(profiles.stream().map(this::toResource).toList());
     }
 
-    @PutMapping("/{profileId}")
+    @PatchMapping("/{profileId}")
     @Operation(summary = "Update profile",
-            description = "Updates name, phone, photo and language of a profile (US-16). The email belongs to IAM and is not changed here.")
+            description = "Updates name, phone, photo and language of a profile (US-16). photoUrl and preferredLanguage are optional: when they are missing the current values are kept. The email belongs to IAM and is not changed here.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Profile updated",
                     content = @Content(schema = @Schema(implementation = ProfileResource.class))),

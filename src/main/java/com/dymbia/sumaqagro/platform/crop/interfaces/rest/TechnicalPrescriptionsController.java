@@ -22,7 +22,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -114,7 +113,7 @@ public class TechnicalPrescriptionsController {
      * @param technicalPrescriptionId the ID of the technical prescription to register application for
      * @return response entity with the updated technical prescription resource
      */
-    @PatchMapping("/{technicalPrescriptionId}/application")
+    @PostMapping("/{technicalPrescriptionId}/application")
     @Operation(summary = "Register the application of a technical prescription")
     @ApiResponse(responseCode = "200", description = "Prescription application registered",
             content = @Content(schema = @Schema(implementation = TechnicalPrescriptionResource.class)))

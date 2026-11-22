@@ -28,6 +28,15 @@ public interface FieldPlotRepository {
     List<FieldPlot> findAllByOwnerUserId(Long ownerUserId);
 
     /**
+     * Finds the plots of a region, without case.
+     *
+     * @param region the region
+     * @return the plots, or an empty list
+     * @since 1.1
+     */
+    List<FieldPlot> findAllByRegion(String region);
+
+    /**
      * Counts the plots of a producer. It is used to check the plan quota.
      *
      * @param ownerUserId the producer id

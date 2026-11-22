@@ -43,6 +43,12 @@ public class FieldPlotRepositoryImpl implements FieldPlotRepository {
     }
 
     @Override
+    public List<FieldPlot> findAllByRegion(String region) {
+        return fieldPlotPersistenceRepository.findAllByRegionIgnoreCase(region).stream()
+                .map(FieldPlotPersistenceAssembler::toDomainFromPersistence).toList();
+    }
+
+    @Override
     public long countByOwnerUserId(Long ownerUserId) {
         return fieldPlotPersistenceRepository.countByOwnerUserIdAndCooperativeIdIsNull(ownerUserId);
     }

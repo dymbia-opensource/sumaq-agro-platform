@@ -3,6 +3,7 @@ package com.dymbia.sumaqagro.platform.crop.application.internal.outboundservices
 import com.dymbia.sumaqagro.platform.farming.interfaces.acl.FarmingContextFacade;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -57,5 +58,16 @@ public class ExternalFarmingService {
     public Optional<String> fetchRegionByPlotId(Long plotId) {
         var region = farmingContextFacade.fetchFieldPlotRegionById(plotId);
         return region == null || region.isBlank() ? Optional.empty() : Optional.of(region);
+    }
+
+    /**
+     * Finds the producers with plots in a region, who must hear about its agroclimatic alerts.
+     *
+     * @param region the region of the alert
+     * @return the producer user ids, without repeats, or an empty list
+     */
+    public List<Long> fetchProducerUserIdsByRegion(String region) {
+        var userIds = farmingContextFacade.fetchOwnerUserIdsByRegion(region);
+        return userIds == null ? List.of() : userIds;
     }
 }

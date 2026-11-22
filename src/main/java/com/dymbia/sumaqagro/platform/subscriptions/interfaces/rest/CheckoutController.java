@@ -5,7 +5,6 @@ import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEn
 import com.dymbia.sumaqagro.platform.subscriptions.application.commandservices.SubscriptionCommandService;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.commands.PaymentCommand;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.valueobjects.PaymentStatus;
-import com.dymbia.sumaqagro.platform.subscriptions.domain.model.valueobjects.PlanCode;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.resources.CheckoutResource;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.transform.PaymentResourceFromEntityAssembler;
 import jakarta.validation.Valid;
@@ -32,7 +31,7 @@ public class CheckoutController {
             @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody CheckoutResource resource
     ) {
-        if (!canSelectPlan(principal, resource.planCode())) {
+        if (!PlanSelectionAccess.canSelectPlan(principal, resource.planCode())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -47,13 +46,4 @@ public class CheckoutController {
         );
     }
 
-    private boolean canSelectPlan(UserDetailsImpl principal, PlanCode planCode) {
-        var authority = switch (planCode) {
-            case SEED -> "ROLE_FARMER";
-            case COOPERATIVE_PRO -> "ROLE_COOPERATIVE_DIRECTOR";
-            case TECHNICAL_ADVISOR -> "ROLE_AGRONOMIST";
-        };
-        return principal.getAuthorities().stream()
-                .anyMatch(granted -> authority.equals(granted.getAuthority()));
-    }
 }

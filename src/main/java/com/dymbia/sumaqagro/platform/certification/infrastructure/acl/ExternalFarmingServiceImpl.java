@@ -32,4 +32,10 @@ public class ExternalFarmingServiceImpl implements ExternalFarmingService {
         return Optional.of(new FieldOrigin(farmingContextFacade.fetchFieldPlotNameById(plotId),
                 farmingContextFacade.fetchFieldPlotRegionById(plotId), null));
     }
+
+    @Override
+    public Optional<Long> fetchOwnerUserIdByPlotId(Long plotId) {
+        var ownerUserId = farmingContextFacade.fetchOwnerUserIdByFieldPlotId(plotId);
+        return ownerUserId == null || ownerUserId == 0L ? Optional.empty() : Optional.of(ownerUserId);
+    }
 }

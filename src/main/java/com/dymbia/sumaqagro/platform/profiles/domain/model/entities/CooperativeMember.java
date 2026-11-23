@@ -65,4 +65,27 @@ public class CooperativeMember {
     public void deactivate() {
         this.active = false;
     }
+
+    /** Whether the member already signs in to SumaqAgro with an account of his own. */
+    public boolean hasAccount() {
+        return userId != null;
+    }
+
+    /**
+     * Links the member to the IAM account he signs in with, when he was registered without one.
+     *
+     * @param userId IAM user id of the producer account
+     */
+    public void linkAccount(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("User id must be a positive number");
+        }
+        if (!active) {
+            throw new IllegalStateException("An inactive member cannot be linked to an account");
+        }
+        if (hasAccount()) {
+            throw new IllegalStateException("The member is already linked to an account");
+        }
+        this.userId = userId;
+    }
 }

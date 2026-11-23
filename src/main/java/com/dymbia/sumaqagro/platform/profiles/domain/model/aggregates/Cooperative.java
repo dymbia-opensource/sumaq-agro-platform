@@ -153,19 +153,81 @@ public class Cooperative extends AbstractDomainAggregateRoot<Cooperative> {
         return member;
     }
 
-    public AgronomistInvitation inviteAgronomist(InviteAgronomistCommand command) {
+    /**
+     * Links a member registered without an account to the producer account he signs in with.
+     *
+     * @param memberId identity of the member inside the cooperative
+     * @param userId   IAM user id of the producer
+     * @return the linked member
+     */
+    public CooperativeMember linkMemberAccount(Long memberId, Long userId) {
+        var member = members.stream()
+                .filter(candidate -> candidate.getId() != null && candidate.getId().equals(memberId))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("The member does not belong to the cooperative"));
+        if (member.hasAccount()) {
+            throw new IllegalStateException("The member is already linked to an account");
+        }
+        if (userId != null && hasMemberWithUserId(userId)) {
+            throw new IllegalArgumentException("This user is already a member of the cooperative");
+        }
+        member.linkAccount(userId);
+        return member;
+    }
+
+    /**
+     * Invites an agronomist (US-19). When the agronomist already has an account, the invitation is
+     * accepted at once and he joins the technical team.
+     *
+     * @param command            email of the agronomist
+     * @param agronomistUserId   IAM user id of the agronomist account with that email, or {@code null}
+     * @return the invitation
+     */
+    public AgronomistInvitation inviteAgronomist(InviteAgronomistCommand command, Long agronomistUserId) {
         Objects.requireNonNull(command, "command must not be null");
+        var email = new EmailAddress(command.email());
+        if (invitations.stream().anyMatch(invitation ->
+                invitation.isActive() && invitation.getEmailValue().equals(email))) {
+            throw new IllegalArgumentException("This agronomist was already invited to the cooperative");
+        }
         var token = UUID.randomUUID().toString();
         var invitation = new AgronomistInvitation(
                 null,
                 this.id,
-                new EmailAddress(command.email()),
+                email,
                 token,
                 InvitationStatus.PENDING,
                 Instant.now());
+        if (agronomistUserId != null) {
+            invitation.accept(agronomistUserId);
+        }
         invitations.add(invitation);
-        registerDomainEvent(new AgronomistInvitedEvent(this.id, invitation.getEmail(), token));
+        registerDomainEvent(new AgronomistInvitedEvent(
+                this.id, invitation.getEmail(), token, agronomistUserId != null));
         return invitation;
+    }
+
+    /**
+     * Accepts the pending invitations sent to the email of a new agronomist account.
+     *
+     * @param email            email of the agronomist account
+     * @param agronomistUserId IAM user id of the agronomist
+     * @return whether an invitation was accepted
+     */
+    public boolean acceptInvitationsOf(String email, Long agronomistUserId) {
+        var address = new EmailAddress(email);
+        var pending = invitations.stream()
+                .filter(invitation -> invitation.isPending() && invitation.getEmailValue().equals(address))
+                .toList();
+        pending.forEach(invitation -> invitation.accept(agronomistUserId));
+        return !pending.isEmpty();
+    }
+
+    /** Accepted invitations: the agronomists of the technical team. */
+    public List<AgronomistInvitation> getTechnicalTeam() {
+        return invitations.stream()
+                .filter(invitation -> invitation.getStatus() == InvitationStatus.ACCEPTED)
+                .toList();
     }
 
     public Optional<CooperativeMember> findMemberByDni(String dni) {

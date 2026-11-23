@@ -15,6 +15,8 @@ public record AgronomistInvitationResource(
         @Schema(description = "Invitation status", example = "PENDING", allowableValues = {"PENDING", "ACCEPTED", "EXPIRED"})
         String status,
         @Schema(description = "When the invitation was sent", example = "2026-11-13T15:00:00Z")
-        Instant sentAt
+        Instant sentAt,
+        @Schema(description = "IAM user id of the agronomist who accepted the invitation", example = "7", nullable = true)
+        Long agronomistUserId
 ) {
 }

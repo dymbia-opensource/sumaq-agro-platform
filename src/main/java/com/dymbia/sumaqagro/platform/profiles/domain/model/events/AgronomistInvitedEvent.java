@@ -6,7 +6,8 @@ package com.dymbia.sumaqagro.platform.profiles.domain.model.events;
  * @param cooperativeId   identity of the cooperative
  * @param email           email of the invited agronomist
  * @param invitationToken token of the invitation
+ * @param accountExists   whether the agronomist already had an account, so the invitation was accepted at once
  * @since 1.0
  */
-public record AgronomistInvitedEvent(Long cooperativeId, String email, String invitationToken) {
+public record AgronomistInvitedEvent(Long cooperativeId, String email, String invitationToken, boolean accountExists) {
 }

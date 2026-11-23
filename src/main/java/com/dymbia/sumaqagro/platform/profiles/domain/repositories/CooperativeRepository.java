@@ -1,6 +1,7 @@
 package com.dymbia.sumaqagro.platform.profiles.domain.repositories;
 
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.EmailAddress;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,9 @@ public interface CooperativeRepository {
     List<Cooperative> findAllByManagerUserId(Long managerUserId);
 
     List<Cooperative> findAllByMemberUserId(Long userId);
+
+    /** Cooperatives with a pending agronomist invitation sent to the given email. */
+    List<Cooperative> findAllWithPendingInvitationFor(EmailAddress email);
 
     boolean existsById(Long id);
     /**

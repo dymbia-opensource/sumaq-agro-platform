@@ -19,6 +19,7 @@ public final class AddCooperativeMemberCommandFromResourceAssembler {
                 resource.lastName(),
                 resource.community(),
                 resource.joinedAt(),
-                resource.userId());
+                resource.userId(),
+                resource.email());
     }
 }

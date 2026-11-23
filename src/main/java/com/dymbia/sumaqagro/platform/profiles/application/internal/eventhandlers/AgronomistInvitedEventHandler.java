@@ -30,6 +30,7 @@ public class AgronomistInvitedEventHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AgronomistInvitedEventHandler.class);
     static final String SUBJECT = "Te invitaron a SumaqAgro como agrónomo";
+    static final String TEAM_SUBJECT = "Te agregaron al equipo técnico de una cooperativa en SumaqAgro";
 
     private final EmailSender emailSender;
     private final CooperativeQueryService cooperativeQueryService;
@@ -48,18 +49,37 @@ public class AgronomistInvitedEventHandler {
         var cooperativeName = cooperativeQueryService.handle(new GetCooperativeByIdQuery(event.cooperativeId()))
                 .map(Cooperative::getBusinessName)
                 .orElse("una cooperativa");
-        var link = UriComponentsBuilder.fromUri(invitationFrontendUrl)
-                .queryParam("invitationToken", event.invitationToken())
-                .build()
-                .encode()
-                .toUri();
         try {
+            if (event.accountExists()) {
+                // The agronomist already signs in: the invitation was accepted, he only needs to sign in
+                var signIn = UriComponentsBuilder.fromUri(invitationFrontendUrl)
+                        .replacePath("/iam/sign-in")
+                        .replaceQuery(null)
+                        .build()
+                        .toUri();
+                emailSender.send(event.email(), TEAM_SUBJECT, teamHtmlContent(cooperativeName, signIn));
+                return;
+            }
+            var link = UriComponentsBuilder.fromUri(invitationFrontendUrl)
+                    .queryParam("invitationToken", event.invitationToken())
+                    .queryParam("email", event.email())
+                    .build()
+                    .encode()
+                    .toUri();
             emailSender.send(event.email(), SUBJECT, htmlContent(cooperativeName, link));
         } catch (EmailSender.DeliveryFailed exception) {
             // Neither the email nor the token are logged: the token gives access to the invitation
             LOGGER.warn("The invitation email of cooperative {} was not sent: {}",
                     event.cooperativeId(), exception.getMessage());
         }
+    }
+
+    static String teamHtmlContent(String cooperativeName, URI signIn) {
+        return """
+                <p>Hola,</p>
+                <p><strong>%s</strong> te agregó a su equipo técnico en SumaqAgro.</p>
+                <p>Ya puedes ver y asesorar las parcelas que te asigne: <a href="%s">ingresar a SumaqAgro</a>.</p>
+                """.formatted(HtmlUtils.htmlEscape(cooperativeName), HtmlUtils.htmlEscape(signIn.toASCIIString()));
     }
 
     static String htmlContent(String cooperativeName, URI link) {

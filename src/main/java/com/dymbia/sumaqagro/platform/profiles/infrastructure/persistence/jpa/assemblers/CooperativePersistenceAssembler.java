@@ -116,6 +116,7 @@ public final class CooperativePersistenceAssembler {
         entity.setInvitationToken(invitation.getInvitationToken());
         entity.setStatus(invitation.getStatus());
         entity.setSentAt(invitation.getSentAt());
+        entity.setAgronomistUserId(invitation.getAgronomistUserId());
         return entity;
     }
 
@@ -126,6 +127,7 @@ public final class CooperativePersistenceAssembler {
                 entity.getEmail(),
                 entity.getInvitationToken(),
                 entity.getStatus(),
-                entity.getSentAt());
+                entity.getSentAt(),
+                entity.getAgronomistUserId());
     }
 }

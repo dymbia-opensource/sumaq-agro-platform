@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.adapters;
 
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Cooperative;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.EmailAddress;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.InvitationStatus;
 import com.dymbia.sumaqagro.platform.profiles.domain.repositories.CooperativeRepository;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.assemblers.CooperativePersistenceAssembler;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories.CooperativePersistenceRepository;
@@ -56,6 +58,14 @@ public class CooperativeRepositoryImpl implements CooperativeRepository {
     @Override
     public List<Cooperative> findAllByMemberUserId(Long userId) {
         return cooperativePersistenceRepository.findAllByMemberUserId(userId).stream()
+                .map(CooperativePersistenceAssembler::toDomainFromPersistence)
+                .toList();
+    }
+
+    @Override
+    public List<Cooperative> findAllWithPendingInvitationFor(EmailAddress email) {
+        return cooperativePersistenceRepository
+                .findAllByInvitationEmailAndStatus(email, InvitationStatus.PENDING).stream()
                 .map(CooperativePersistenceAssembler::toDomainFromPersistence)
                 .toList();
     }

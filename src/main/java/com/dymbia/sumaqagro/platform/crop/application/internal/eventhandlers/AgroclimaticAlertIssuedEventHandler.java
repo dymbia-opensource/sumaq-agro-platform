@@ -2,11 +2,9 @@ package com.dymbia.sumaqagro.platform.crop.application.internal.eventhandlers;
 
 import com.dymbia.sumaqagro.platform.crop.application.internal.outboundservices.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.crop.application.internal.outboundservices.acl.ExternalIamService;
-import com.dymbia.sumaqagro.platform.crop.application.internal.outboundservices.acl.ExternalProfilesService;
 import com.dymbia.sumaqagro.platform.crop.domain.model.events.AgroclimaticAlertIssuedEvent;
 import com.dymbia.sumaqagro.platform.crop.domain.model.valueobjects.AgroclimaticAlertSeverity;
 import com.dymbia.sumaqagro.platform.shared.application.outboundservices.email.EmailSender;
-import com.dymbia.sumaqagro.platform.shared.application.outboundservices.messaging.MessageSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,11 +15,10 @@ import org.springframework.web.util.HtmlUtils;
 import java.util.Set;
 
 /**
- * Logs newly issued agroclimatic alerts and, when they are serious, warns the producers of the region:
- * by email (Brevo) to the address of their account, and by WhatsApp or SMS (Twilio) to the phone of
- * their profile. Each channel only works when it is configured.
+ * Logs newly issued agroclimatic alerts and, when they are serious, emails them (Brevo) to the producers
+ * with plots in the region, at the address of their account.
  * <p>
- * It runs after the alert is stored, and a failing notification never undoes the alert: the producer still
+ * It runs after the alert is stored, and a failing email never undoes the alert: the producer still
  * sees it in the application.
  * </p>
  */
@@ -30,25 +27,19 @@ public class AgroclimaticAlertIssuedEventHandler {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(AgroclimaticAlertIssuedEventHandler.class);
-    // Only serious alerts reach the producer, so they are not flooded with notifications
+    // Only serious alerts reach the producer, so they are not flooded with emails
     static final Set<AgroclimaticAlertSeverity> NOTIFIED_SEVERITIES =
             Set.of(AgroclimaticAlertSeverity.HIGH, AgroclimaticAlertSeverity.CRITICAL);
 
     private final ExternalFarmingService externalFarmingService;
-    private final ExternalProfilesService externalProfilesService;
     private final ExternalIamService externalIamService;
-    private final MessageSender messageSender;
     private final EmailSender emailSender;
 
     public AgroclimaticAlertIssuedEventHandler(ExternalFarmingService externalFarmingService,
-                                               ExternalProfilesService externalProfilesService,
                                                ExternalIamService externalIamService,
-                                               MessageSender messageSender,
                                                EmailSender emailSender) {
         this.externalFarmingService = externalFarmingService;
-        this.externalProfilesService = externalProfilesService;
         this.externalIamService = externalIamService;
-        this.messageSender = messageSender;
         this.emailSender = emailSender;
     }
 
@@ -61,59 +52,26 @@ public class AgroclimaticAlertIssuedEventHandler {
                 event.getIssuedAt(),
                 event.getAlertSource()
         );
-        var byEmail = emailSender.isEnabled();
-        var byMessage = messageSender.isEnabled();
-        if (!NOTIFIED_SEVERITIES.contains(event.getSeverity()) || (!byEmail && !byMessage)) {
+        if (!NOTIFIED_SEVERITIES.contains(event.getSeverity()) || !emailSender.isEnabled()) {
             return;
         }
 
-        int emails = 0;
-        int messages = 0;
+        int sent = 0;
         for (var producerUserId : externalFarmingService.fetchProducerUserIdsByRegion(event.getRegion())) {
-            if (byEmail && notifyByEmail(producerUserId, event)) {
-                emails++;
+            var email = externalIamService.fetchEmailByUserId(producerUserId);
+            if (email.isEmpty()) {
+                continue;
             }
-            if (byMessage && notifyByMessage(producerUserId, event)) {
-                messages++;
+            try {
+                emailSender.send(email.get(), emailSubject(event), emailHtml(event));
+                sent++;
+            } catch (EmailSender.DeliveryFailed exception) {
+                // The email address is not logged: it is personal data
+                LOGGER.warn("The alert email for producer {} was not sent: {}", producerUserId,
+                        exception.getMessage());
             }
         }
-        LOGGER.info("Agroclimatic alert '{}' of {} sent by {} email(s) and {} message(s)",
-                event.getTitle(), event.getRegion(), emails, messages);
-    }
-
-    private boolean notifyByEmail(Long producerUserId, AgroclimaticAlertIssuedEvent event) {
-        var email = externalIamService.fetchEmailByUserId(producerUserId);
-        if (email.isEmpty()) {
-            return false;
-        }
-        try {
-            emailSender.send(email.get(), emailSubject(event), emailHtml(event));
-            return true;
-        } catch (EmailSender.DeliveryFailed exception) {
-            // The email address is not logged: it is personal data
-            LOGGER.warn("The alert email for producer {} was not sent: {}", producerUserId, exception.getMessage());
-            return false;
-        }
-    }
-
-    private boolean notifyByMessage(Long producerUserId, AgroclimaticAlertIssuedEvent event) {
-        var phone = externalProfilesService.fetchPhoneNumberByUserId(producerUserId);
-        if (phone.isEmpty()) {
-            return false;
-        }
-        try {
-            messageSender.send(phone.get(), messageBody(event));
-            return true;
-        } catch (MessageSender.DeliveryFailed exception) {
-            // The phone is not logged: it is personal data
-            LOGGER.warn("The alert message for producer {} was not sent: {}", producerUserId, exception.getMessage());
-            return false;
-        }
-    }
-
-    static String messageBody(AgroclimaticAlertIssuedEvent event) {
-        return "SumaqAgro - %s (%s, severidad %s)%n%s".formatted(
-                event.getTitle(), event.getRegion(), event.getSeverity(), event.getDescription());
+        LOGGER.info("Agroclimatic alert '{}' of {} sent by {} email(s)", event.getTitle(), event.getRegion(), sent);
     }
 
     static String emailSubject(AgroclimaticAlertIssuedEvent event) {

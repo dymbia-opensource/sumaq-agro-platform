@@ -14,6 +14,7 @@ import java.util.Optional;
 public class ExternalIamService {
 
     private static final String AGRONOMIST_ROLE = "ROLE_AGRONOMIST";
+    private static final String FARMER_ROLE = "ROLE_FARMER";
 
     private final IamContextFacade iamContextFacade;
 
@@ -23,6 +24,42 @@ public class ExternalIamService {
 
     public boolean isAgronomist(Long userId) {
         return userId != null && userId > 0 && iamContextFacade.userHasRole(userId, AGRONOMIST_ROLE);
+    }
+
+    /**
+     * Finds the producer account that uses an email.
+     *
+     * @param email email typed by the director
+     * @return the IAM user id, empty when no producer account uses it
+     */
+    public Optional<Long> findFarmerUserIdByEmail(String email) {
+        return findUserIdByEmailWithRole(email, FARMER_ROLE);
+    }
+
+    /**
+     * Finds the agronomist account that uses an email.
+     *
+     * @param email email of the invitation
+     * @return the IAM user id, empty when no agronomist account uses it
+     */
+    public Optional<Long> findAgronomistUserIdByEmail(String email) {
+        return findUserIdByEmailWithRole(email, AGRONOMIST_ROLE);
+    }
+
+    public boolean isFarmer(Long userId) {
+        return userId != null && userId > 0 && iamContextFacade.userHasRole(userId, FARMER_ROLE);
+    }
+
+    private Optional<Long> findUserIdByEmailWithRole(String email, String role) {
+        if (email == null || email.isBlank()) return Optional.empty();
+        try {
+            var userId = iamContextFacade.fetchUserIdByEmail(email.trim().toLowerCase(java.util.Locale.ROOT));
+            return userId != null && userId > 0 && iamContextFacade.userHasRole(userId, role)
+                    ? Optional.of(userId)
+                    : Optional.empty();
+        } catch (IllegalArgumentException invalidEmail) {
+            return Optional.empty();
+        }
     }
 
     public Optional<String> fetchEmailByUserId(Long userId) {

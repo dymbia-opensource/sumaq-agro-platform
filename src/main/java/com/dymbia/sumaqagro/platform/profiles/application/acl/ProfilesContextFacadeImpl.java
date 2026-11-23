@@ -1,11 +1,13 @@
 package com.dymbia.sumaqagro.platform.profiles.application.acl;
 
+import com.dymbia.sumaqagro.platform.profiles.application.commandservices.CooperativeCommandService;
 import com.dymbia.sumaqagro.platform.profiles.application.commandservices.ProfileCommandService;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.AgronomistAssignmentQueryService;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.CooperativeQueryService;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.ProfileQueryService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.AgronomistAssignment;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.AcceptAgronomistInvitationsCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.CreateProfileCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAgronomistAssignedToPlotQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
@@ -44,11 +46,14 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
     private final ProfileQueryService profileQueryService;
     private final CooperativeQueryService cooperativeQueryService;
     private final AgronomistAssignmentQueryService agronomistAssignmentQueryService;
+    private final CooperativeCommandService cooperativeCommandService;
 
     public ProfilesContextFacadeImpl(ProfileCommandService profileCommandService,
                                      ProfileQueryService profileQueryService,
                                      CooperativeQueryService cooperativeQueryService,
-                                     AgronomistAssignmentQueryService agronomistAssignmentQueryService) {
+                                     AgronomistAssignmentQueryService agronomistAssignmentQueryService,
+                                     CooperativeCommandService cooperativeCommandService) {
+        this.cooperativeCommandService = cooperativeCommandService;
         this.profileCommandService = profileCommandService;
         this.profileQueryService = profileQueryService;
         this.cooperativeQueryService = cooperativeQueryService;
@@ -66,6 +71,15 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
             return result.toOptional().map(Profile::getId).orElse(0L);
         } catch (IllegalArgumentException e) {
             return 0L;
+        }
+    }
+
+    @Override
+    public int acceptAgronomistInvitations(Long agronomistUserId, String email) {
+        try {
+            return cooperativeCommandService.handle(new AcceptAgronomistInvitationsCommand(agronomistUserId, email));
+        } catch (IllegalArgumentException e) {
+            return 0;
         }
     }
 

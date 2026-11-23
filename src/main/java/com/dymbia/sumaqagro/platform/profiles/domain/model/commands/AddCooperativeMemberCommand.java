@@ -12,6 +12,8 @@ import java.time.LocalDate;
  * @param lastName      last name of the member
  * @param community     community or caserío of the member
  * @param joinedAt      date when the member joined the cooperative
+ * @param userId        IAM user id of the member account, if known
+ * @param email         email of the member account, resolved to {@code userId} by the application layer
  * @since 1.0
  */
 public record AddCooperativeMemberCommand(
@@ -22,7 +24,8 @@ public record AddCooperativeMemberCommand(
         String lastName,
         String community,
         LocalDate joinedAt,
-        Long userId
+        Long userId,
+        String email
 ) {
     public AddCooperativeMemberCommand {
         if (directorUserId <= 0) {
@@ -46,5 +49,22 @@ public record AddCooperativeMemberCommand(
         if (userId != null && userId <= 0) {
             throw new IllegalArgumentException("User id must be a positive number");
         }
+        if (email != null && email.isBlank()) {
+            email = null;
+        }
+        if (userId != null && email != null) {
+            throw new IllegalArgumentException("Send the account email or the user id, not both");
+        }
+    }
+
+    /**
+     * Returns the same command linked to the account found for {@link #email()}.
+     *
+     * @param resolvedUserId IAM user id of the account
+     * @return the command with the user id
+     */
+    public AddCooperativeMemberCommand withUserId(Long resolvedUserId) {
+        return new AddCooperativeMemberCommand(cooperativeId, directorUserId, dni, firstName, lastName,
+                community, joinedAt, resolvedUserId, null);
     }
 }

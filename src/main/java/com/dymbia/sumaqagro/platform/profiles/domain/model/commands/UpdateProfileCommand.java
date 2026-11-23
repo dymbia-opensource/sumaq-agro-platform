@@ -19,7 +19,8 @@ public record UpdateProfileCommand(
         String lastName,
         String phoneNumber,
         String photoUrl,
-        PreferredLanguage preferredLanguage
+        PreferredLanguage preferredLanguage,
+        String dni
 ) {
     public UpdateProfileCommand {
         if (profileId == null || profileId <= 0) {

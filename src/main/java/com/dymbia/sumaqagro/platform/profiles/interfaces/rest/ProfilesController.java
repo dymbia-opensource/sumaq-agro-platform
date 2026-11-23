@@ -1,5 +1,6 @@
 package com.dymbia.sumaqagro.platform.profiles.interfaces.rest;
 
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import com.dymbia.sumaqagro.platform.profiles.application.commandservices.ProfileCommandService;
 import com.dymbia.sumaqagro.platform.profiles.application.internal.outboundservices.acl.ExternalIamService;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.ProfileQueryService;
@@ -26,6 +27,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -58,13 +60,14 @@ public class ProfilesController {
     public ResponseEntity<?> getProfileById(
             @PathVariable
             @Parameter(description = "Profile unique identifier", example = "1", required = true)
-            Long profileId) {
+            Long profileId,
+            @AuthenticationPrincipal UserDetailsImpl principal) {
         var profile = profileQueryService.handle(new GetProfileByIdQuery(profileId));
         if (profile.isEmpty()) {
             var error = ApplicationError.notFound("Profile", profileId.toString());
             return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(error);
         }
-        return ResponseEntity.ok(toResource(profile.get()));
+        return ResponseEntity.ok(toResource(profile.get(), principal));
     }
 
     @GetMapping
@@ -78,11 +81,12 @@ public class ProfilesController {
     public ResponseEntity<List<ProfileResource>> getProfiles(
             @RequestParam(required = false)
             @Parameter(description = "IAM user id (optional filter)", example = "1")
-            Long userId) {
+            Long userId,
+            @AuthenticationPrincipal UserDetailsImpl principal) {
         List<Profile> profiles = userId != null
                 ? profileQueryService.handle(new GetProfileByUserIdQuery(userId)).map(profile -> List.of(profile)).orElse(List.of())
                 : profileQueryService.handle(new GetAllProfilesQuery());
-        return ResponseEntity.ok(profiles.stream().map(this::toResource).toList());
+        return ResponseEntity.ok(profiles.stream().map(profile -> toResource(profile, principal)).toList());
     }
 
     @PatchMapping("/{profileId}")
@@ -92,20 +96,30 @@ public class ProfilesController {
             @ApiResponse(responseCode = "200", description = "Profile updated",
                     content = @Content(schema = @Schema(implementation = ProfileResource.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "403", description = "The profile belongs to another user"),
             @ApiResponse(responseCode = "404", description = "Profile not found")
     })
     public ResponseEntity<?> updateProfile(
             @PathVariable
             @Parameter(description = "Profile unique identifier", example = "1", required = true)
             Long profileId,
+            @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody UpdateProfileResource resource) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        var current = profileQueryService.handle(new GetProfileByIdQuery(profileId));
+        if (current.isPresent() && !current.get().getUserId().equals(principal.getId())) {
+            // Each user edits only his own profile
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var command = UpdateProfileCommandFromResourceAssembler.toCommandFromResource(profileId, resource);
         var result = profileCommandService.handle(command);
-        return ResponseEntityAssembler.toResponseEntityFromResult(result, this::toResource, HttpStatus.OK);
+        return ResponseEntityAssembler.toResponseEntityFromResult(
+                result, profile -> toResource(profile, principal), HttpStatus.OK);
     }
 
-    private ProfileResource toResource(Profile profile) {
+    private ProfileResource toResource(Profile profile, UserDetailsImpl principal) {
         var email = externalIamService.fetchEmailByUserId(profile.getUserId()).orElse(null);
-        return ProfileResourceFromEntityAssembler.toResourceFromEntity(profile, email);
+        var owner = principal != null && profile.getUserId().equals(principal.getId());
+        return ProfileResourceFromEntityAssembler.toResourceFromEntity(profile, email, owner);
     }
 }

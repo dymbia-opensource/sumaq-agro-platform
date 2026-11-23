@@ -10,9 +10,10 @@ public final class ProfileResourceFromEntityAssembler {
 
     /**
      * @param entity the profile
-     * @param email  the account email read from IAM (may be {@code null})
+     * @param email   the account email read from IAM (may be {@code null})
+     * @param showDni whether the reader may see the DNI (only the owner of the profile)
      */
-    public static ProfileResource toResourceFromEntity(Profile entity, String email) {
+    public static ProfileResource toResourceFromEntity(Profile entity, String email, boolean showDni) {
         return new ProfileResource(
                 entity.getId(),
                 entity.getUserId(),
@@ -22,6 +23,7 @@ public final class ProfileResourceFromEntityAssembler {
                 email,
                 entity.getPhoneNumber(),
                 entity.getPhotoUrl(),
-                entity.getPreferredLanguage().name());
+                entity.getPreferredLanguage().name(),
+                showDni ? entity.getDni() : null);
     }
 }

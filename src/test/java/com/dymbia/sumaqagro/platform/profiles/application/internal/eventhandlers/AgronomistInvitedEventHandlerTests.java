@@ -31,7 +31,7 @@ class AgronomistInvitedEventHandlerTests {
             cooperativeQueryService, URI.create("http://localhost:4200/iam/sign-up"));
 
     private static final AgronomistInvitedEvent EVENT =
-            new AgronomistInvitedEvent(3L, "agronomo@example.com", "token-123");
+            new AgronomistInvitedEvent(3L, "agronomo@example.com", "token-123", false);
 
     private String sentHtml() {
         var html = ArgumentCaptor.forClass(String.class);
@@ -50,6 +50,20 @@ class AgronomistInvitedEventHandlerTests {
         var html = sentHtml();
         assertTrue(html.contains("Cooperativa Valle del Mantaro"));
         assertTrue(html.contains("http://localhost:4200/iam/sign-up?invitationToken=token-123"));
+    }
+
+    @Test
+    void anAgronomistWithAnAccountIsToldHeJoinedTheTeamAndLinkedToSignIn() {
+        var cooperative = mock(Cooperative.class);
+        when(cooperative.getBusinessName()).thenReturn("Cooperativa Valle del Mantaro");
+        when(cooperativeQueryService.handle(any(GetCooperativeByIdQuery.class))).thenReturn(Optional.of(cooperative));
+
+        handler.on(new AgronomistInvitedEvent(3L, "agronomo@example.com", "token-123", true));
+
+        var html = ArgumentCaptor.forClass(String.class);
+        verify(emailSender).send(eq("agronomo@example.com"), eq(AgronomistInvitedEventHandler.TEAM_SUBJECT), html.capture());
+        assertTrue(html.getValue().contains("http://localhost:4200/iam/sign-in"));
+        assertFalse(html.getValue().contains("token-123"));
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.dymbia.sumaqagro.platform.iam.application.internal.outboundservices.t
 import com.dymbia.sumaqagro.platform.iam.domain.model.aggregates.User;
 import com.dymbia.sumaqagro.platform.iam.domain.model.commands.SignInCommand;
 import com.dymbia.sumaqagro.platform.iam.domain.model.commands.SignUpCommand;
+import com.dymbia.sumaqagro.platform.iam.domain.model.valueobjects.Roles;
 import com.dymbia.sumaqagro.platform.iam.domain.repositories.RoleRepository;
 import com.dymbia.sumaqagro.platform.iam.domain.repositories.UserRepository;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
@@ -132,6 +133,10 @@ public class UserCommandServiceImpl implements UserCommandService {
                 command.firstName(),
                 command.lastName()
         );
+        // An invited agronomist joins the technical team of the cooperatives that invited his email
+        if (command.requestedRole() == Roles.ROLE_AGRONOMIST) {
+            profilesContextFacade.acceptAgronomistInvitations(savedUser.getId(), savedUser.getEmail().value());
+        }
 
         return Result.success(savedUser);
     }

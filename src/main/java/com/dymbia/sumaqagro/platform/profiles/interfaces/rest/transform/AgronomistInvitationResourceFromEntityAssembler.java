@@ -14,6 +14,7 @@ public final class AgronomistInvitationResourceFromEntityAssembler {
                 entity.getCooperativeId(),
                 entity.getEmail(),
                 entity.getStatus().name(),
-                entity.getSentAt());
+                entity.getSentAt(),
+                entity.getAgronomistUserId());
     }
 }

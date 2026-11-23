@@ -37,6 +37,10 @@ public class AgronomistInvitationPersistenceEntity extends AuditableAbstractPers
     @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 
+    /** IAM user id of the agronomist who accepted the invitation; null while it is pending. */
+    @Column(name = "agronomist_user_id")
+    private Long agronomistUserId;
+
     public AgronomistInvitationPersistenceEntity() {
     }
 
@@ -78,5 +82,13 @@ public class AgronomistInvitationPersistenceEntity extends AuditableAbstractPers
 
     public void setSentAt(Instant sentAt) {
         this.sentAt = sentAt;
+    }
+
+    public Long getAgronomistUserId() {
+        return agronomistUserId;
+    }
+
+    public void setAgronomistUserId(Long agronomistUserId) {
+        this.agronomistUserId = agronomistUserId;
     }
 }

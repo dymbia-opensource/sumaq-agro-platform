@@ -1,6 +1,7 @@
 package com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.assemblers;
 
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Dni;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PhoneNumber;
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.embeddables.PersonNamePersistenceEmbeddable;
@@ -24,7 +25,8 @@ public final class ProfilePersistenceAssembler {
                 toDomainFromPersistence(entity.getName()),
                 entity.getPhoneNumber() != null ? new PhoneNumber(entity.getPhoneNumber()) : null,
                 entity.getPhotoUrl(),
-                entity.getPreferredLanguage());
+                entity.getPreferredLanguage(),
+                entity.getDni() != null ? new Dni(entity.getDni()) : null);
     }
 
     public static ProfilePersistenceEntity toPersistenceFromDomain(Profile profile) {
@@ -37,6 +39,7 @@ public final class ProfilePersistenceAssembler {
         entity.setPhoneNumber(profile.getPhoneNumber());
         entity.setPhotoUrl(profile.getPhotoUrl());
         entity.setPreferredLanguage(profile.getPreferredLanguage());
+        entity.setDni(profile.getDni());
         return entity;
     }
 

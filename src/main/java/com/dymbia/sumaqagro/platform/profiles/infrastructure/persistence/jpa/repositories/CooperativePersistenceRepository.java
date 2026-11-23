@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.repositories;
 
 import com.dymbia.sumaqagro.platform.profiles.infrastructure.persistence.jpa.entities.CooperativePersistenceEntity;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.EmailAddress;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.InvitationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,6 +21,12 @@ public interface CooperativePersistenceRepository extends JpaRepository<Cooperat
     @Query("select distinct cooperative from CooperativePersistenceEntity cooperative "
             + "join cooperative.members member where member.userId = :userId")
     List<CooperativePersistenceEntity> findAllByMemberUserId(@Param("userId") Long userId);
+
+    @Query("select distinct cooperative from CooperativePersistenceEntity cooperative "
+            + "join cooperative.invitations invitation "
+            + "where invitation.email = :email and invitation.status = :status")
+    List<CooperativePersistenceEntity> findAllByInvitationEmailAndStatus(@Param("email") EmailAddress email,
+                                                                         @Param("status") InvitationStatus status);
 
     boolean existsByRuc(String ruc);
 

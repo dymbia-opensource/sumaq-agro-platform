@@ -30,6 +30,9 @@ public class ProfilePersistenceEntity extends AuditableAbstractPersistenceEntity
     @Column(name = "photo_url", length = 255)
     private String photoUrl;
 
+    @Column(length = 8)
+    private String dni;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_language", nullable = false, length = 2)
     private PreferredLanguage preferredLanguage;
@@ -67,6 +70,14 @@ public class ProfilePersistenceEntity extends AuditableAbstractPersistenceEntity
 
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public String getDni() {
+        return dni;
+    }
+
+    public void setDni(String dni) {
+        this.dni = dni;
     }
 
     public PreferredLanguage getPreferredLanguage() {

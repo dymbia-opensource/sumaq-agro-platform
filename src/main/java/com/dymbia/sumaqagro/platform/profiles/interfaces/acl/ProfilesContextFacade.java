@@ -21,6 +21,16 @@ public interface ProfilesContextFacade {
      */
     Long createProfile(Long userId, String firstName, String lastName);
 
+    /**
+     * Accepts the pending cooperative invitations sent to the email of a new agronomist account,
+     * so the agronomist joins their technical teams (US-19).
+     *
+     * @param agronomistUserId IAM user id of the agronomist
+     * @param email            email of the agronomist account
+     * @return how many cooperatives the agronomist joined
+     */
+    int acceptAgronomistInvitations(Long agronomistUserId, String email);
+
     /** Returns the full name stored in the user profile, when present. */
     Optional<String> fetchFullNameByUserId(Long userId);
 

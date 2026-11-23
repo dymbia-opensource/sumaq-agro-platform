@@ -8,7 +8,9 @@ public final class InviteAgronomistCommandFromResourceAssembler {
     private InviteAgronomistCommandFromResourceAssembler() {
     }
 
-    public static InviteAgronomistCommand toCommandFromResource(Long cooperativeId, InviteAgronomistResource resource) {
-        return new InviteAgronomistCommand(cooperativeId, resource.email());
+    public static InviteAgronomistCommand toCommandFromResource(Long cooperativeId,
+                                                                long directorUserId,
+                                                                InviteAgronomistResource resource) {
+        return new InviteAgronomistCommand(cooperativeId, directorUserId, resource.email());
     }
 }

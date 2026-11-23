@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import com.dymbia.sumaqagro.platform.certification.domain.repositories.QualityCertificateRepository;
+import com.dymbia.sumaqagro.platform.certification.domain.model.queries.GetQualityCertificateByIdQuery;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,7 +42,6 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 public class QualityCertificatesController {
 
     private final CertificationAccess access;
-    private final QualityCertificateRepository certificates;
     private final QualityCertificateCommandService qualityCertificateCommandService;
     private final HarvestCertificationQueryService harvestCertificationQueryService;
     private final String publicBaseUrl;
@@ -51,13 +50,11 @@ public class QualityCertificatesController {
             QualityCertificateCommandService qualityCertificateCommandService,
             HarvestCertificationQueryService harvestCertificationQueryService,
             CertificationAccess access,
-            QualityCertificateRepository certificates,
             @Value("${sumaqagro.certification.public-base-url}") String publicBaseUrl) {
         this.qualityCertificateCommandService = qualityCertificateCommandService;
         this.harvestCertificationQueryService = harvestCertificationQueryService;
         this.publicBaseUrl = publicBaseUrl;
         this.access = access;
-        this.certificates = certificates;
     }
 
     /**
@@ -131,7 +128,9 @@ public class QualityCertificatesController {
     @PostMapping("{qualityCertificateId}/revocation")
     public ResponseEntity<?> revokeQualityCertificate(@PathVariable Long qualityCertificateId,
                                                         @AuthenticationPrincipal UserDetailsImpl principal) {
-        var certificate = certificates.findById(qualityCertificateId).orElse(null);
+        if (qualityCertificateId == null || qualityCertificateId <= 0) return ResponseEntity.notFound().build();
+        var certificate = harvestCertificationQueryService
+                .handle(new GetQualityCertificateByIdQuery(qualityCertificateId)).orElse(null);
         if (certificate == null || !access.managesBatch(principal, certificate.getHarvestBatchId())) {
             return ResponseEntity.notFound().build();
         }

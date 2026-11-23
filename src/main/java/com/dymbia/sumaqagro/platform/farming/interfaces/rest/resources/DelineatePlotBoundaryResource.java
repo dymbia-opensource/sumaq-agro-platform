@@ -1,5 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.interfaces.rest.resources;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
 /**
@@ -7,5 +10,9 @@ import java.util.List;
  *
  * @param coordinates the coordinates of the plot polygon
  */
-public record DelineatePlotBoundaryResource(List<GeoCoordinateResource> coordinates) {
+@Schema(name = "DelineatePlotBoundaryRequest", description = "GPS polygon of a field plot")
+public record DelineatePlotBoundaryResource(
+        @ArraySchema(arraySchema = @Schema(description = "Vertices of the polygon in order, at least 3 different points"),
+                minItems = 3)
+        List<GeoCoordinateResource> coordinates) {
 }

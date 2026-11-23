@@ -1,6 +1,8 @@
 package com.dymbia.sumaqagro.platform.farming.domain.model.aggregates;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.StartCropCampaignCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.CropCampaignClosedEvent;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.CropCampaignStartedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.events.SowingDateRecordedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CampaignStatus;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.CropType;
@@ -10,7 +12,6 @@ import com.dymbia.sumaqagro.platform.shared.domain.model.aggregates.AbstractDoma
 import lombok.Getter;
 
 import java.time.LocalDate;
-import java.util.Objects;
 
 /**
  * Crop campaign aggregate root.
@@ -40,10 +41,10 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
 
     private CropCampaign(FieldPlotId fieldPlotId, String season, CropType cropType, SeedVariety seedVariety,
                          boolean seedVarietyCustom, LocalDate sowingDate) {
-        this.fieldPlotId = Objects.requireNonNull(fieldPlotId, "fieldPlotId is required");
-        this.season = Objects.requireNonNull(season, "season is required");
-        this.cropType = Objects.requireNonNull(cropType, "cropType is required");
-        this.seedVariety = Objects.requireNonNull(seedVariety, "seedVariety is required");
+        this.fieldPlotId = required(fieldPlotId, "crop.campaign.error.plotId.invalid");
+        this.season = required(season, "crop.campaign.error.season.invalid");
+        this.cropType = required(cropType, "crop.campaign.error.cropType.required");
+        this.seedVariety = required(seedVariety, "crop.campaign.error.seedVariety.notBlank");
         this.seedVarietyCustom = seedVarietyCustom;
         this.sowingDate = sowingDate;
         this.status = CampaignStatus.IN_PROGRESS;
@@ -82,8 +83,16 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
         var cropCampaign = new CropCampaign(fieldPlotId, season, cropType, seedVariety, seedVarietyCustom,
                 sowingDate);
         cropCampaign.id = id;
-        cropCampaign.status = Objects.requireNonNull(status, "status is required");
+        cropCampaign.status = required(status, "crop.campaign.error.status.required");
         return cropCampaign;
+    }
+
+    /**
+     * Registers that the campaign started. It is called after the first save,
+     * when the campaign already has its id, so the cost ledger can be opened (US-36).
+     */
+    public void onStarted() {
+        registerDomainEvent(new CropCampaignStartedEvent(id, cropType));
     }
 
     /**
@@ -94,7 +103,7 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
      */
     public void selectCropType(CropType cropType) {
         ensureInProgress();
-        this.cropType = Objects.requireNonNull(cropType, "cropType is required");
+        this.cropType = required(cropType, "crop.campaign.error.cropType.required");
     }
 
     /**
@@ -106,7 +115,7 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
      */
     public void specifySeedVariety(SeedVariety seedVariety, boolean custom) {
         ensureInProgress();
-        this.seedVariety = Objects.requireNonNull(seedVariety, "seedVariety is required");
+        this.seedVariety = required(seedVariety, "crop.campaign.error.seedVariety.notBlank");
         this.seedVarietyCustom = custom;
     }
 
@@ -118,18 +127,20 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
      */
     public void recordSowingDate(LocalDate sowingDate) {
         ensureInProgress();
-        this.sowingDate = Objects.requireNonNull(sowingDate, "sowingDate is required");
+        this.sowingDate = required(sowingDate, "crop.campaign.error.sowingDate.required");
         registerDomainEvent(new SowingDateRecordedEvent(fieldPlotId.fieldPlotId(), sowingDate));
     }
 
     /**
      * Finishes the campaign. After this it accepts no more changes.
+     * It raises {@link CropCampaignClosedEvent} so the cost ledger is frozen (US-35).
      *
      * @throws IllegalStateException when the campaign is already finished
      */
     public void close() {
         ensureInProgress();
         this.status = CampaignStatus.FINISHED;
+        registerDomainEvent(new CropCampaignClosedEvent(id));
     }
 
     /**
@@ -164,5 +175,13 @@ public class CropCampaign extends AbstractDomainAggregateRoot<CropCampaign> {
         if (isFinished()) {
             throw new IllegalStateException(FINISHED_MESSAGE_KEY);
         }
+    }
+
+    // A missing value is a bad request: it answers 400 with the translated message of the key
+    private static <T> T required(T value, String messageKey) {
+        if (value == null) {
+            throw new IllegalArgumentException(messageKey);
+        }
+        return value;
     }
 }

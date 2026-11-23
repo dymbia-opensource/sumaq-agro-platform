@@ -21,7 +21,7 @@ public record DelineatePlotBoundaryCommand(Long fieldPlotId, PlotBoundary bounda
             throw new IllegalArgumentException("field.plot.error.id.invalid");
         }
         if (boundary == null) {
-            throw new IllegalArgumentException("field.plot.error.boundar.required");
+            throw new IllegalArgumentException("field.plot.error.boundary.required");
         }
     }
 }

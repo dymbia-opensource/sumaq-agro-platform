@@ -3,6 +3,7 @@ package com.dymbia.sumaqagro.platform.farming.application.internal.queryservices
 import com.dymbia.sumaqagro.platform.farming.application.queryservices.FieldPlotQueryService;
 import com.dymbia.sumaqagro.platform.farming.domain.model.aggregates.FieldPlot;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetAllFieldPlotsByOwnerUserIdQuery;
+import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetAllFieldPlotsByRegionQuery;
 import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotByIdQuery;
 import com.dymbia.sumaqagro.platform.farming.domain.repositories.FieldPlotRepository;
 import org.springframework.stereotype.Service;
@@ -30,4 +31,9 @@ public class FieldPlotQueryServiceImpl implements FieldPlotQueryService {
         return fieldPlotRepository.findAllByOwnerUserId(query.ownerUserId());
     }
 
+
+    @Override
+    public List<FieldPlot> handle(GetAllFieldPlotsByRegionQuery query) {
+        return fieldPlotRepository.findAllByRegion(query.region());
+    }
 }

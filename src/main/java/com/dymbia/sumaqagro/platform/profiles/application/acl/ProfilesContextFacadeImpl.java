@@ -8,11 +8,16 @@ import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Agronomist
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.CreateProfileCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAgronomistAssignedToPlotQuery;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.entities.CooperativeMember;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetCooperativeByIdQuery;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetCooperativeMembersByCooperativeIdQuery;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetCooperativeMembersByUserIdQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetProfileByUserIdQuery;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.acl.ProfilesContextFacade;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,5 +96,44 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
         return profileQueryService.handle(new GetProfileByUserIdQuery(userId))
                 .map(Profile::getPhoneNumber)
                 .filter(phone -> !phone.isBlank());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean managesCooperative(Long userId, Long cooperativeId) {
+        if (userId == null || userId <= 0 || cooperativeId == null || cooperativeId <= 0) return false;
+        return cooperativeQueryService.handle(new GetCooperativeByIdQuery(cooperativeId))
+                .filter(cooperative -> userId.equals(cooperative.getManagerUserId()))
+                .isPresent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isActiveMemberOfCooperative(Long cooperativeId, Long memberId) {
+        if (cooperativeId == null || cooperativeId <= 0 || memberId == null || memberId <= 0) return false;
+        return cooperativeQueryService.handle(new GetCooperativeMembersByCooperativeIdQuery(cooperativeId)).stream()
+                .anyMatch(member -> memberId.equals(member.getId()) && member.isActive());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long fetchUserIdOfActiveCooperativeMember(Long cooperativeId, Long memberId) {
+        if (cooperativeId == null || cooperativeId <= 0 || memberId == null || memberId <= 0) return 0L;
+        return cooperativeQueryService.handle(new GetCooperativeMembersByCooperativeIdQuery(cooperativeId)).stream()
+                .filter(member -> memberId.equals(member.getId()) && member.isActive())
+                .map(CooperativeMember::getUserId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(0L);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> fetchActiveMemberIdsByUserIdAndCooperativeId(Long userId, Long cooperativeId) {
+        if (userId == null || userId <= 0 || cooperativeId == null || cooperativeId <= 0) return List.of();
+        return cooperativeQueryService.handle(new GetCooperativeMembersByUserIdQuery(userId)).stream()
+                .filter(member -> member.isActive() && cooperativeId.equals(member.getCooperativeId()))
+                .map(CooperativeMember::getId)
+                .toList();
     }
 }

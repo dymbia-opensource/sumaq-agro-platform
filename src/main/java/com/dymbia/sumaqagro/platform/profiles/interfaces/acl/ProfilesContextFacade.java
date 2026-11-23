@@ -1,5 +1,6 @@
 package com.dymbia.sumaqagro.platform.profiles.interfaces.acl;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -43,4 +44,29 @@ public interface ProfilesContextFacade {
      * @return Optional containing the phone number if the profile exists and has one
      */
     Optional<String> fetchPhoneNumberByUserId(Long userId);
+
+    /**
+     * @return true when the user is the manager of the cooperative
+     * @since 1.1
+     */
+    boolean managesCooperative(Long userId, Long cooperativeId);
+
+    /**
+     * @return true when the member is an active member of the cooperative, with or without a user account
+     * @since 1.1
+     */
+    boolean isActiveMemberOfCooperative(Long cooperativeId, Long memberId);
+
+    /**
+     * @return the user id of an active member of the cooperative, or {@code 0L} when the member does not exist,
+     * belongs to another cooperative or is inactive
+     * @since 1.1
+     */
+    Long fetchUserIdOfActiveCooperativeMember(Long cooperativeId, Long memberId);
+
+    /**
+     * @return the ids of the active memberships of the user in the cooperative, or an empty list
+     * @since 1.1
+     */
+    List<Long> fetchActiveMemberIdsByUserIdAndCooperativeId(Long userId, Long cooperativeId);
 }

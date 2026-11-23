@@ -48,6 +48,30 @@ class ProblemDetailFromApplicationErrorAssemblerTests {
     }
 
     @Test
+    void shouldAnswerInEnglishEvenWhenTheMachineIsConfiguredInSpanish() {
+        var previousDefaultLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("es-PE"));
+            LocaleContextHolder.setLocale(Locale.ENGLISH);
+
+            var problem = ProblemDetailFromApplicationErrorAssembler
+                    .toProblemDetailFromApplicationError(ApplicationError.notFound("FieldPlot", "7"));
+
+            assertEquals("Field plot not found", problem.getDetail());
+        } finally {
+            Locale.setDefault(previousDefaultLocale);
+        }
+    }
+
+    @Test
+    void shouldMapSecurityErrorsToTheirHttpStatus() {
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode("AUTHENTICATION_REQUIRED"));
+        assertEquals(HttpStatus.FORBIDDEN,
+                ProblemDetailFromApplicationErrorAssembler.toStatusFromErrorCode("ACCESS_DENIED"));
+    }
+
+    @Test
     void shouldUseTheGenericMessageOfTheCategoryWhenThereIsNoSpecificOne() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
 

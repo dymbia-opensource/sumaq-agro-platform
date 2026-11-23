@@ -1,6 +1,7 @@
 package com.dymbia.sumaqagro.platform.crop.application.internal.commandservices;
 
 import com.dymbia.sumaqagro.platform.crop.application.commandservices.SatelliteObservationCommandService;
+import com.dymbia.sumaqagro.platform.crop.application.internal.outboundservices.acl.ExternalFarmingService;
 import com.dymbia.sumaqagro.platform.crop.application.internal.outboundservices.monitoring.SatelliteImagery;
 import com.dymbia.sumaqagro.platform.crop.domain.model.aggregates.SatelliteObservation;
 import com.dymbia.sumaqagro.platform.crop.domain.model.commands.ImportSatelliteObservationCommand;
@@ -9,8 +10,6 @@ import com.dymbia.sumaqagro.platform.crop.domain.model.valueobjects.NdviIndex;
 import com.dymbia.sumaqagro.platform.crop.domain.model.valueobjects.NdwiIndex;
 import com.dymbia.sumaqagro.platform.crop.domain.model.valueobjects.Percentage;
 import com.dymbia.sumaqagro.platform.crop.domain.repositories.SatelliteObservationRepository;
-import com.dymbia.sumaqagro.platform.farming.application.queryservices.FieldPlotQueryService;
-import com.dymbia.sumaqagro.platform.farming.domain.model.queries.GetFieldPlotByIdQuery;
 import com.dymbia.sumaqagro.platform.shared.application.result.ApplicationError;
 import com.dymbia.sumaqagro.platform.shared.application.result.Result;
 import org.slf4j.Logger;
@@ -27,13 +26,14 @@ public class SatelliteObservationCommandServiceImpl implements SatelliteObservat
 
     private final SatelliteObservationRepository observationRepository;
 
-    private final FieldPlotQueryService fieldPlots;
+    private final ExternalFarmingService externalFarmingService;
     private final SatelliteImagery imagery;
 
     public SatelliteObservationCommandServiceImpl(SatelliteObservationRepository observationRepository,
-                                                  FieldPlotQueryService fieldPlots, SatelliteImagery imagery) {
+                                                  ExternalFarmingService externalFarmingService,
+                                                  SatelliteImagery imagery) {
         this.observationRepository = observationRepository;
-        this.fieldPlots = fieldPlots;
+        this.externalFarmingService = externalFarmingService;
         this.imagery = imagery;
     }
 
@@ -46,9 +46,8 @@ public class SatelliteObservationCommandServiceImpl implements SatelliteObservat
             return Result.success(savedObservation.getId());
         } catch (RuntimeException e) {
             LOGGER.error("Failed to record satellite observation", e);
-            return Result.failure(ApplicationError.unexpected(
-                    "record-satellite-observation", "Could not record the satellite observation"
-            ));
+            return Result.failure(ApplicationError.unexpected("record-satellite-observation",
+                    "Could not record the " + "satellite observation"));
         }
     }
 
@@ -59,38 +58,37 @@ public class SatelliteObservationCommandServiceImpl implements SatelliteObservat
         var end = command.end();
 
         if (start.getEpochSecond() >= end.getEpochSecond()) {
-            return Result.failure(ApplicationError.validationError(
-                    "SatelliteObservation", "Start must precede end at whole-second precision"));
+            return Result.failure(ApplicationError.validationError("SatelliteObservation", "Start must precede end " +
+                    "at" + " whole-second precision"));
         }
 
-        var plot = fieldPlots.handle(new GetFieldPlotByIdQuery(plotId))
-                .filter(fieldPlot -> command.requestedByUserId().equals(fieldPlot.getOwnerUserId()));
-        if (plot.isEmpty()) {
+        // Another producer's plot answers 404, so it does not reveal that the plot exists
+        var ownedByRequester =
+                externalFarmingService.fetchOwnerUserIdByPlotId(plotId).filter(ownerUserId -> ownerUserId.equals(command.requestedByUserId()));
+        if (ownedByRequester.isEmpty()) {
             return Result.failure(ApplicationError.notFound("FieldPlot", plotId.toString()));
         }
-        var polygonId = plot.get().getAgroMonitoringPolygonId();
-        if (polygonId == null || polygonId.isBlank()) {
-            return Result.failure(ApplicationError.conflict(
-                    "FieldPlot", "The plot must be linked to a monitoring polygon"));
+        var polygonId = externalFarmingService.fetchMonitoringPolygonIdByPlotId(plotId);
+        if (polygonId.isEmpty()) {
+            return Result.failure(ApplicationError.conflict("FieldPlot",
+                    "The plot must be linked to a monitoring " + "polygon"));
         }
 
         SatelliteObservation observation;
         try {
-            var measurement = imagery.findLatest(polygonId, start, end);
+            var measurement = imagery.findLatest(polygonId.get(), start, end);
             if (measurement.isEmpty()) {
                 return Result.failure(ApplicationError.notFound("SatelliteObservation", plotId.toString()));
             }
             var capture = measurement.get();
-            var recordCommand = new RecordSatelliteObservationCommand(
-                    plotId, capture.capturedAt(), capture.source(),
+            var recordCommand = new RecordSatelliteObservationCommand(plotId, capture.capturedAt(), capture.source(),
                     capture.ndviMean() == null ? null : new NdviIndex(capture.ndviMean()),
                     capture.ndwiMean() == null ? null : new NdwiIndex(capture.ndwiMean()),
-                    new Percentage(capture.cloudCoveragePercent()), null
-            );
+                    new Percentage(capture.cloudCoveragePercent()), null);
             observation = new SatelliteObservation(recordCommand);
         } catch (SatelliteImagery.Unavailable | IllegalArgumentException e) {
-            return Result.failure(ApplicationError.unexpected(
-                    "import-satellite-observation", "Could not read usable measurements from AgroMonitoring"));
+            return Result.failure(ApplicationError.unexpected("import-satellite-observation", "Could not read usable "
+                    + "measurements from AgroMonitoring"));
         }
         return Result.success(observationRepository.saveImported(observation));
     }

@@ -46,10 +46,16 @@ public class CropCampaignRepositoryImpl implements CropCampaignRepository {
 
     @Override
     public CropCampaign save(CropCampaign cropCampaign) {
+        var isNew = cropCampaign.getId() == null;
         var savedEntity = cropCampaignPersistenceRepository.save(
                 CropCampaignPersistenceAssembler.toPersistenceFromDomain(cropCampaign));
         var savedCropCampaign = CropCampaignPersistenceAssembler.toDomainFromPersistence(savedEntity);
         domainEventPublisher.publishAndClearEvents(cropCampaign);
+        // Only after the first save does the campaign have its id: now the ledger can be opened (US-36)
+        if (isNew) {
+            savedCropCampaign.onStarted();
+            domainEventPublisher.publishAndClearEvents(savedCropCampaign);
+        }
         return savedCropCampaign;
     }
 }

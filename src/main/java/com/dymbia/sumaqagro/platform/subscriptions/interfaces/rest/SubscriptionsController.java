@@ -41,7 +41,7 @@ public class SubscriptionsController {
     }
 
     /** Cancels renewal for the authenticated account. */
-    @PostMapping("/me/cancel")
+    @PostMapping("/me/cancellation")
     public ResponseEntity<?> cancelMySubscription(@AuthenticationPrincipal UserDetailsImpl principal) {
         var result = subscriptionCommandService.handle(new CancelSubscriptionCommand(principal.getId()));
         return ResponseEntityAssembler.toResponseEntityFromResult(

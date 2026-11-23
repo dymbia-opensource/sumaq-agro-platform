@@ -111,7 +111,7 @@ public class AgronomistAssignmentsController {
                 .toList());
     }
 
-    @PutMapping("/{assignmentId}")
+    @PostMapping("/{assignmentId}/reassignments")
     @Operation(summary = "Reassign the plot to another agronomist",
             description = "Gives the plot to another agronomist. The previous agronomist is saved in the history.")
     @ApiResponses(value = {

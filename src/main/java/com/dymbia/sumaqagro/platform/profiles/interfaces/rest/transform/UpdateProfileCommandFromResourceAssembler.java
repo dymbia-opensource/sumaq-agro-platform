@@ -22,6 +22,7 @@ public final class UpdateProfileCommandFromResourceAssembler {
                 resource.lastName(),
                 resource.phoneNumber(),
                 resource.photoUrl(),
-                language);
+                language,
+                resource.dni());
     }
 }

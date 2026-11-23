@@ -3,6 +3,7 @@ package com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.CreateProfileCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.commands.UpdateProfileCommand;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.events.ProfileUpdatedEvent;
+import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.Dni;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PersonName;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PhoneNumber;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.valueobjects.PreferredLanguage;
@@ -32,6 +33,9 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
 
     private PhoneNumber phoneNumber;
 
+    /** Optional DNI: a producer who adds it does not have to dictate it to the cooperative. */
+    private Dni dni;
+
     @Getter
     private String photoUrl;
 
@@ -54,7 +58,18 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
                    PhoneNumber phoneNumber,
                    String photoUrl,
                    PreferredLanguage preferredLanguage) {
+        this(id, userId, name, phoneNumber, photoUrl, preferredLanguage, null);
+    }
+
+    private Profile(Long id,
+                    Long userId,
+                    PersonName name,
+                    PhoneNumber phoneNumber,
+                    String photoUrl,
+                    PreferredLanguage preferredLanguage,
+                    Dni dni) {
         this.id = id;
+        this.dni = dni;
         this.userId = Objects.requireNonNull(userId, "userId must not be null");
         this.name = Objects.requireNonNull(name, "name must not be null");
         this.phoneNumber = phoneNumber;
@@ -71,6 +86,7 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
      * @param phoneNumber       contact phone (optional)
      * @param photoUrl          profile photo URL (optional)
      * @param preferredLanguage preferred UI language
+     * @param dni               DNI (optional)
      * @return the reconstituted Profile instance
      */
     public static Profile reconstitute(Long id,
@@ -78,8 +94,9 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
                                        PersonName name,
                                        PhoneNumber phoneNumber,
                                        String photoUrl,
-                                       PreferredLanguage preferredLanguage) {
-        return new Profile(id, userId, name, phoneNumber, photoUrl, preferredLanguage);
+                                       PreferredLanguage preferredLanguage,
+                                       Dni dni) {
+        return new Profile(id, userId, name, phoneNumber, photoUrl, preferredLanguage, dni);
     }
 
     /**
@@ -108,7 +125,8 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
     }
 
     /**
-     * Updates the contact data. Values that are not sent (photo, language) keep their current value.
+     * Updates the contact data. Values that are not sent (photo, language, DNI) keep their current value;
+     * a blank DNI removes it.
      */
     public void update(UpdateProfileCommand command) {
         Objects.requireNonNull(command, "command must not be null");
@@ -121,6 +139,9 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
         }
         if (command.preferredLanguage() != null) {
             this.preferredLanguage = command.preferredLanguage();
+        }
+        if (command.dni() != null) {
+            this.dni = command.dni().isBlank() ? null : new Dni(command.dni());
         }
         registerDomainEvent(new ProfileUpdatedEvent(this.id, this.userId));
     }
@@ -135,5 +156,9 @@ public class Profile extends AbstractDomainAggregateRoot<Profile> {
 
     public PhoneNumber getPhoneNumberValue() {
         return phoneNumber;
+    }
+
+    public String getDni() {
+        return dni != null ? dni.value() : null;
     }
 }

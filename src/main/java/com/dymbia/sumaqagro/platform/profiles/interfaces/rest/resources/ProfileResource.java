@@ -21,6 +21,8 @@ public record ProfileResource(
         @Schema(description = "Profile photo URL", example = "https://cdn.sumaqagro.pe/photos/1.png")
         String photoUrl,
         @Schema(description = "Interface language", example = "ES", allowableValues = {"ES", "EN"})
-        String preferredLanguage
+        String preferredLanguage,
+        @Schema(description = "DNI, only shown to the owner of the profile", example = "45678912", nullable = true)
+        String dni
 ) {
 }

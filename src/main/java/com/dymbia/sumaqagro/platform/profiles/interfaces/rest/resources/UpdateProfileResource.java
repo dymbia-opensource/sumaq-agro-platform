@@ -32,6 +32,10 @@ public record UpdateProfileResource(
 
         @Pattern(regexp = "(?i)ES|EN", message = "{validation.language}")
         @Schema(description = "Interface language (optional)", example = "ES", allowableValues = {"ES", "EN"})
-        String preferredLanguage
+        String preferredLanguage,
+
+        @Pattern(regexp = "\\d{8}|", message = "{validation.dni}")
+        @Schema(description = "DNI (optional, 8 digits; an empty value removes it)", example = "45678912")
+        String dni
 ) {
 }

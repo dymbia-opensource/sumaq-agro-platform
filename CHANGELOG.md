@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Profiles**: A member is linked to his producer account by **email** (`email` in `POST /api/v1/cooperatives/{id}/members`) instead of the numeric user id, and a member registered without an account is linked later with `PUT /api/v1/cooperatives/{id}/members/{memberId}/account`. Only producer accounts can be linked.
+- **Profiles**: Optional **DNI** in the profile (`dni` in `PATCH /api/v1/profiles/{id}`; an empty value removes it), only shown to the owner of the profile.
+- **Profiles**: `GET /api/v1/cooperatives/{id}/member-candidates?email=` returns the names, DNI and phone of the producer account that uses an email, so the director only adds the community when he registers the member.
+- **Profiles**: Technical team of the cooperative with `GET /api/v1/cooperatives/{id}/invitations`: pending and accepted invitations, the accepted ones with the user id of the agronomist.
+- **Profiles**: An agronomist who signs up with an invited email joins the technical team of the cooperative (the invitation is accepted), and an agronomist who already has an account joins at once and is emailed a link to sign in.
+
+### Changed
+- **Profiles**: `userId` of `POST /api/v1/cooperatives/{id}/members` is deprecated in favor of `email`; it must belong to a producer account.
+- **Profiles**: The same email cannot be invited twice to a cooperative, and the invitation link also carries the invited email.
+
+### Security
+- **Profiles**: A profile can only be updated by its owner (`PATCH /api/v1/profiles/{id}` accepted any user before).
+- **Profiles**: Only the director of the cooperative can invite agronomists (`POST /api/v1/cooperatives/{id}/invitations` accepted any request before).
+
 ## [1.1.0] - 2026-11-22
 
 ### Added

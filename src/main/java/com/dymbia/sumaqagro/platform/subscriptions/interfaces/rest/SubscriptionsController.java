@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import com.dymbia.sumaqagro.platform.subscriptions.application.queryservices.SubscriptionQueryService;
 import com.dymbia.sumaqagro.platform.subscriptions.application.commandservices.SubscriptionCommandService;
@@ -25,6 +27,7 @@ import java.util.List;
  * Exposes subscription operations for the authenticated account.
  */
 @RestController
+@Tag(name = "Subscriptions", description = "Subscription and payments of the authenticated account")
 @RequestMapping("/api/v1/subscriptions")
 public class SubscriptionsController {
 
@@ -41,6 +44,8 @@ public class SubscriptionsController {
     }
 
     /** Cancels renewal for the authenticated account. */
+    @Operation(summary = "Cancel the renewal of my subscription",
+            description = "The access is kept until the end of the paid period.")
     @PostMapping("/me/cancellation")
     public ResponseEntity<?> cancelMySubscription(@AuthenticationPrincipal UserDetailsImpl principal) {
         var result = subscriptionCommandService.handle(new CancelSubscriptionCommand(principal.getId()));
@@ -54,6 +59,8 @@ public class SubscriptionsController {
     /**
      * Returns the caller's subscription, or 204 if no subscription exists.
      */
+    @Operation(summary = "Get my subscription",
+            description = "Returns the subscription of the authenticated account, or 204 when it has none yet.")
     @GetMapping("/me")
     public ResponseEntity<SubscriptionResource> getMySubscription(
             @AuthenticationPrincipal UserDetailsImpl principal
@@ -65,6 +72,8 @@ public class SubscriptionsController {
     }
 
     /** Returns the authenticated account's checkout history, newest first. */
+    @Operation(summary = "Get my payments",
+            description = "Payment history of the authenticated account, newest first.")
     @GetMapping("/me/payments")
     public List<PaymentResource> getMyPayments(@AuthenticationPrincipal UserDetailsImpl principal) {
         return subscriptionQueryService.handle(new GetPaymentsByUserIdQuery(principal.getId()))

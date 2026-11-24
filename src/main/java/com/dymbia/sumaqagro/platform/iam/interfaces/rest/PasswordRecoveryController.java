@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.iam.interfaces.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dymbia.sumaqagro.platform.iam.application.commandservices.PasswordRecoveryCommandService;
 import com.dymbia.sumaqagro.platform.iam.domain.model.commands.RequestPasswordResetCommand;
 import com.dymbia.sumaqagro.platform.iam.domain.model.commands.ResetPasswordCommand;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Exposes password recovery for accounts that cannot sign in. */
 @RestController
+@Tag(name = "Password Recovery", description = "Password recovery for accounts that cannot sign in")
 @RequestMapping("/api/v1/authentication/password-recovery")
 public class PasswordRecoveryController {
 
@@ -32,6 +35,8 @@ public class PasswordRecoveryController {
     }
 
     /** Accepts a recovery request without disclosing account existence. */
+    @Operation(summary = "Request a password reset",
+            description = "Emails a reset link when the account exists. It always answers the same, so it does not reveal which emails have an account.")
     @PostMapping("/request")
     public ResponseEntity<Void> requestReset(
             @Valid @RequestBody RequestPasswordResetResource resource
@@ -48,6 +53,8 @@ public class PasswordRecoveryController {
     }
 
     /** Updates the password when the supplied token is still usable. */
+    @Operation(summary = "Reset the password",
+            description = "Sets a new password with the token of the reset email, while the token is still valid.")
     @PostMapping("/reset")
     public ResponseEntity<?> resetPassword(
             @Valid @RequestBody ResetPasswordResource resource

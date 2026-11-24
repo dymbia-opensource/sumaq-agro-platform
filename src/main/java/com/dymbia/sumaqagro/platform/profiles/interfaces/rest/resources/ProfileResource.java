@@ -14,9 +14,9 @@ public record ProfileResource(
         String lastName,
         @Schema(description = "Full name", example = "Guillermo Quispe")
         String fullName,
-        @Schema(description = "Account email, read-only (owned by IAM)", example = "guillermo@sumaqagro.pe")
+        @Schema(description = "Account email, read-only (owned by IAM); only shown to the owner", example = "guillermo@sumaqagro.pe", nullable = true)
         String email,
-        @Schema(description = "Phone number for SMS / WhatsApp alerts", example = "+51 987 654 321")
+        @Schema(description = "Phone number; only shown to the owner", example = "+51 987 654 321", nullable = true)
         String phoneNumber,
         @Schema(description = "Profile photo URL", example = "https://cdn.sumaqagro.pe/photos/1.png")
         String photoUrl,

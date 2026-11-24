@@ -223,6 +223,17 @@ public class Cooperative extends AbstractDomainAggregateRoot<Cooperative> {
         return !pending.isEmpty();
     }
 
+    /**
+     * Whether an agronomist belongs to the technical team: only they can be put in charge of
+     * the plots of the members.
+     *
+     * @param agronomistUserId IAM user id of the agronomist
+     */
+    public boolean hasAgronomistInTeam(Long agronomistUserId) {
+        return agronomistUserId != null && getTechnicalTeam().stream()
+                .anyMatch(invitation -> agronomistUserId.equals(invitation.getAgronomistUserId()));
+    }
+
     /** Accepted invitations: the agronomists of the technical team. */
     public List<AgronomistInvitation> getTechnicalTeam() {
         return invitations.stream()

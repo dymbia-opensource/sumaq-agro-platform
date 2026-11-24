@@ -21,10 +21,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,13 +39,17 @@ public class AgronomistAssignmentsController {
 
     private final AgronomistAssignmentCommandService agronomistAssignmentCommandService;
     private final AgronomistAssignmentQueryService agronomistAssignmentQueryService;
+    private final CooperativeAccess access;
 
     public AgronomistAssignmentsController(AgronomistAssignmentCommandService agronomistAssignmentCommandService,
-                                           AgronomistAssignmentQueryService agronomistAssignmentQueryService) {
+                                           AgronomistAssignmentQueryService agronomistAssignmentQueryService,
+                                           CooperativeAccess access) {
+        this.access = access;
         this.agronomistAssignmentCommandService = agronomistAssignmentCommandService;
         this.agronomistAssignmentQueryService = agronomistAssignmentQueryService;
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PostMapping
     @Operation(summary = "Assign an agronomist to a plot",
             description = "The cooperative director assigns an agronomist to the plot of a member (US-20). "
@@ -55,7 +62,13 @@ public class AgronomistAssignmentsController {
             @ApiResponse(responseCode = "409", description = "The plot already has an active assignment"),
             @ApiResponse(responseCode = "422", description = "The plot owner is not a member of the cooperative")
     })
-    public ResponseEntity<?> assignAgronomistToPlot(@Valid @RequestBody AssignAgronomistToPlotResource resource) {
+    public ResponseEntity<?> assignAgronomistToPlot(@AuthenticationPrincipal UserDetailsImpl principal,
+                                                    @Valid @RequestBody AssignAgronomistToPlotResource resource) {
+        // A director only assigns agronomists in his own cooperative
+        if (!access.manages(principal, resource.cooperativeId())) {
+            var error = ApplicationError.notFound("Cooperative", resource.cooperativeId().toString());
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(error);
+        }
         var command = AssignAgronomistToPlotCommandFromResourceAssembler.toCommandFromResource(resource);
         var result = agronomistAssignmentCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(
@@ -111,6 +124,7 @@ public class AgronomistAssignmentsController {
                 .toList());
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PostMapping("/{assignmentId}/reassignments")
     @Operation(summary = "Reassign the plot to another agronomist",
             description = "Gives the plot to another agronomist. The previous agronomist is saved in the history.")
@@ -124,7 +138,12 @@ public class AgronomistAssignmentsController {
             @PathVariable
             @Parameter(description = "Assignment unique identifier", example = "1", required = true)
             Long assignmentId,
+            @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody ReassignAgronomistResource resource) {
+        if (!access.managesAssignment(principal, assignmentId)) {
+            var error = ApplicationError.notFound("AgronomistAssignment", assignmentId.toString());
+            return ProblemDetailFromApplicationErrorAssembler.toResponseFromApplicationError(error);
+        }
         var command = ReassignAgronomistCommandFromResourceAssembler.toCommandFromResource(assignmentId, resource);
         var result = agronomistAssignmentCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(

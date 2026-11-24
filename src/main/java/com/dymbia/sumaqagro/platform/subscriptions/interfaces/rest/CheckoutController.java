@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dymbia.sumaqagro.platform.iam.infrastructure.authorization.sfs.model.UserDetailsImpl;
 import com.dymbia.sumaqagro.platform.shared.interfaces.rest.transform.ResponseEntityAssembler;
 import com.dymbia.sumaqagro.platform.subscriptions.application.commandservices.SubscriptionCommandService;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** Exposes checkout for environments configured to accept university payments. */
 @RestController
+@Tag(name = "Subscriptions", description = "Subscription and payments of the authenticated account")
 @RequestMapping("/api/v1/subscriptions/me")
 @ConditionalOnProperty(name = "subscriptions.demo-payments.enabled", havingValue = "true")
 public class CheckoutController {
@@ -26,6 +29,8 @@ public class CheckoutController {
     }
 
     /** Confirms checkout for the authenticated account. */
+    @Operation(summary = "Pay a plan with the demo checkout",
+            description = "Only exists when subscriptions.demo-payments.enabled is true. simulatedOutcome chooses a completed or rejected payment.")
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(
             @AuthenticationPrincipal UserDetailsImpl principal,

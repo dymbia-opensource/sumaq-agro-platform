@@ -11,19 +11,19 @@ public final class ProfileResourceFromEntityAssembler {
     /**
      * @param entity the profile
      * @param email   the account email read from IAM (may be {@code null})
-     * @param showDni whether the reader may see the DNI (only the owner of the profile)
+     * @param owner   whether the reader owns the profile: only he sees the phone, the email and the DNI
      */
-    public static ProfileResource toResourceFromEntity(Profile entity, String email, boolean showDni) {
+    public static ProfileResource toResourceFromEntity(Profile entity, String email, boolean owner) {
         return new ProfileResource(
                 entity.getId(),
                 entity.getUserId(),
                 entity.getName().firstName(),
                 entity.getName().lastName(),
                 entity.getFullName(),
-                email,
-                entity.getPhoneNumber(),
+                owner ? email : null,
+                owner ? entity.getPhoneNumber() : null,
                 entity.getPhotoUrl(),
                 entity.getPreferredLanguage().name(),
-                showDni ? entity.getDni() : null);
+                owner ? entity.getDni() : null);
     }
 }

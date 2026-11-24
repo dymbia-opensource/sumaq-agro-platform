@@ -29,6 +29,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,17 +44,21 @@ public class CooperativesController {
     private final CooperativeQueryService cooperativeQueryService;
     private final ProfileQueryService profileQueryService;
     private final ExternalIamService externalIamService;
+    private final CooperativeAccess access;
 
     public CooperativesController(CooperativeCommandService cooperativeCommandService,
                                   CooperativeQueryService cooperativeQueryService,
                                   ProfileQueryService profileQueryService,
-                                  ExternalIamService externalIamService) {
+                                  ExternalIamService externalIamService,
+                                  CooperativeAccess access) {
+        this.access = access;
         this.cooperativeCommandService = cooperativeCommandService;
         this.cooperativeQueryService = cooperativeQueryService;
         this.profileQueryService = profileQueryService;
         this.externalIamService = externalIamService;
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PostMapping
     @Operation(summary = "Register a cooperative",
             description = "Registers a cooperative with its RUC, business name and region (US-17).")
@@ -63,7 +68,12 @@ public class CooperativesController {
             @ApiResponse(responseCode = "400", description = "Invalid input data"),
             @ApiResponse(responseCode = "409", description = "RUC already registered")
     })
-    public ResponseEntity<?> registerCooperative(@Valid @RequestBody RegisterCooperativeResource resource) {
+    public ResponseEntity<?> registerCooperative(@AuthenticationPrincipal UserDetailsImpl principal,
+                                                 @Valid @RequestBody RegisterCooperativeResource resource) {
+        // A director registers his own cooperative, never one in the name of another user
+        if (!resource.managerUserId().equals(principal.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var command = RegisterCooperativeCommandFromResourceAssembler.toCommandFromResource(resource);
         var result = cooperativeCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(
@@ -107,6 +117,7 @@ public class CooperativesController {
                 .toList());
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PutMapping("/{cooperativeId}")
     @Operation(summary = "Update cooperative",
             description = "Updates the institutional data of a cooperative (settings view). All fields are required.")
@@ -121,13 +132,18 @@ public class CooperativesController {
             @PathVariable
             @Parameter(description = "Cooperative unique identifier", example = "1", required = true)
             Long cooperativeId,
+            @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody UpdateCooperativeResource resource) {
+        if (!access.manages(principal, cooperativeId)) {
+            return notFound(cooperativeId);
+        }
         var command = UpdateCooperativeCommandFromResourceAssembler.toCommandFromResource(cooperativeId, resource);
         var result = cooperativeCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 result, CooperativeResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PostMapping("/{cooperativeId}/members")
     @Operation(summary = "Add a member", description = "Adds a producer to the member list of the cooperative (US-18).")
     @ApiResponses(value = {
@@ -142,11 +158,6 @@ public class CooperativesController {
             Long cooperativeId,
             @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody AddCooperativeMemberResource resource) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        if (principal.getAuthorities().stream()
-                .noneMatch(authority -> "ROLE_COOPERATIVE_DIRECTOR".equals(authority.getAuthority()))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         var command = AddCooperativeMemberCommandFromResourceAssembler.toCommandFromResource(cooperativeId, principal.getId(), resource);
         var result = cooperativeCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(
@@ -173,6 +184,7 @@ public class CooperativesController {
                 .toList());
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @GetMapping("/{cooperativeId}/member-candidates")
     @Operation(summary = "Look up a producer to add as a member",
             description = "Finds the producer account that uses an email and returns the data of its profile "
@@ -190,8 +202,6 @@ public class CooperativesController {
             @Parameter(description = "Email of the producer account", example = "guillermo.quispe@gmail.com", required = true)
             String email,
             @AuthenticationPrincipal UserDetailsImpl principal) {
-        var denied = requireDirector(principal);
-        if (denied != null) return denied;
         var cooperative = cooperativeQueryService.handle(new GetCooperativeByIdQuery(cooperativeId))
                 .filter(found -> found.getManagerUserId().equals(principal.getId()));
         if (cooperative.isEmpty()) {
@@ -214,6 +224,7 @@ public class CooperativesController {
                 cooperative.get().hasActiveMemberWithUserId(found.getUserId())));
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PutMapping("/{cooperativeId}/members/{memberId}/account")
     @Operation(summary = "Link a member to his account",
             description = "Links a member registered without an account to the producer account that uses the given email.")
@@ -234,8 +245,6 @@ public class CooperativesController {
             Long memberId,
             @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody LinkCooperativeMemberAccountResource resource) {
-        var denied = requireDirector(principal);
-        if (denied != null) return denied;
         var command = LinkCooperativeMemberAccountCommandFromResourceAssembler.toCommandFromResource(
                 cooperativeId, principal.getId(), memberId, resource);
         var result = cooperativeCommandService.handle(command);
@@ -243,6 +252,7 @@ public class CooperativesController {
                 result, CooperativeMemberResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @GetMapping("/{cooperativeId}/invitations")
     @Operation(summary = "Get the agronomist invitations of a cooperative",
             description = "Pending and accepted invitations. The accepted ones carry the user id of the agronomist: "
@@ -257,8 +267,6 @@ public class CooperativesController {
             @Parameter(description = "Cooperative unique identifier", example = "1", required = true)
             Long cooperativeId,
             @AuthenticationPrincipal UserDetailsImpl principal) {
-        var denied = requireDirector(principal);
-        if (denied != null) return denied;
         var cooperative = cooperativeQueryService.handle(new GetCooperativeByIdQuery(cooperativeId))
                 .filter(found -> found.getManagerUserId().equals(principal.getId()));
         if (cooperative.isEmpty()) {
@@ -269,6 +277,7 @@ public class CooperativesController {
                 .toList());
     }
 
+    @PreAuthorize("hasRole('COOPERATIVE_DIRECTOR')")
     @PostMapping("/{cooperativeId}/invitations")
     @Operation(summary = "Invite an agronomist",
             description = "Creates an invitation with a unique token for an agronomist (US-19). "
@@ -285,23 +294,11 @@ public class CooperativesController {
             Long cooperativeId,
             @AuthenticationPrincipal UserDetailsImpl principal,
             @Valid @RequestBody InviteAgronomistResource resource) {
-        var denied = requireDirector(principal);
-        if (denied != null) return denied;
         var command = InviteAgronomistCommandFromResourceAssembler.toCommandFromResource(
                 cooperativeId, principal.getId(), resource);
         var result = cooperativeCommandService.handle(command);
         return ResponseEntityAssembler.toResponseEntityFromResult(
                 result, AgronomistInvitationResourceFromEntityAssembler::toResourceFromEntity, HttpStatus.CREATED);
-    }
-
-    /** Only a cooperative director manages members and invitations. */
-    private static ResponseEntity<?> requireDirector(UserDetailsImpl principal) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        if (principal.getAuthorities().stream()
-                .noneMatch(authority -> "ROLE_COOPERATIVE_DIRECTOR".equals(authority.getAuthority()))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        return null;
     }
 
     private ResponseEntity<?> notFound(Long cooperativeId) {

@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dymbia.sumaqagro.platform.subscriptions.application.queryservices.PlanQueryService;
 import com.dymbia.sumaqagro.platform.subscriptions.domain.model.queries.GetAllPlansQuery;
 import com.dymbia.sumaqagro.platform.subscriptions.interfaces.rest.resources.PlanResource;
@@ -12,6 +14,7 @@ import java.util.List;
 
 /** Exposes the subscription plan catalog. */
 @RestController
+@Tag(name = "Plans", description = "Subscription plans catalog")
 @RequestMapping("/api/v1/plans")
 public class PlansController {
 
@@ -22,6 +25,8 @@ public class PlansController {
     }
 
     /** Returns the persisted catalog for the authenticated checkout flow. */
+    @Operation(summary = "Get the subscription plans",
+            description = "Returns the catalog: Semilla for independent farmers, Cooperativa Pro for cooperatives and Asesor Tecnico for agronomists, with their monthly and annual prices and quotas.")
     @GetMapping
     public List<PlanResource> getAllPlans() {
         return planQueryService.handle(new GetAllPlansQuery()).stream()

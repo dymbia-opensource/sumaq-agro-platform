@@ -15,10 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Profiles**: An agronomist who signs up with an invited email joins the technical team of the cooperative (the invitation is accepted), and an agronomist who already has an account joins at once and is emailed a link to sign in.
 
 ### Changed
+- **REST API documentation**: Every endpoint is grouped and described in Swagger (`@Tag` and `@Operation` on the plans, subscriptions, demo checkout, password recovery and certification workspace controllers).
 - **Profiles**: `userId` of `POST /api/v1/cooperatives/{id}/members` is deprecated in favor of `email`; it must belong to a producer account.
 - **Profiles**: The same email cannot be invited twice to a cooperative, and the invitation link also carries the invited email.
 
 ### Security
+- **Profiles**: `GET /api/v1/profiles` no longer lists every profile: without `userId` it returns the caller's own profile, and the phone, email and DNI are only shown to the owner (other users see the name).
+- **Profiles**: Only the director of a cooperative can update it (`PUT /api/v1/cooperatives/{id}`), assign or reassign the agronomists of its plots (`POST /api/v1/agronomist-assignments`, `POST /api/v1/agronomist-assignments/{id}/reassignments`), and a director registers a cooperative only in his own name. These endpoints accepted any authenticated user before.
+- **Profiles**: Only agronomists of the technical team of the cooperative can be put in charge of its plots.
+- **Profiles**: The role of the director endpoints is checked with `@PreAuthorize`, and `CooperativeAccess` checks that the director manages the cooperative.
 - **Profiles**: A profile can only be updated by its owner (`PATCH /api/v1/profiles/{id}` accepted any user before).
 - **Profiles**: Only the director of the cooperative can invite agronomists (`POST /api/v1/cooperatives/{id}/invitations` accepted any request before).
 

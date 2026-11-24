@@ -5,7 +5,6 @@ import com.dymbia.sumaqagro.platform.profiles.application.commandservices.Profil
 import com.dymbia.sumaqagro.platform.profiles.application.internal.outboundservices.acl.ExternalIamService;
 import com.dymbia.sumaqagro.platform.profiles.application.queryservices.ProfileQueryService;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.aggregates.Profile;
-import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetAllProfilesQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetProfileByIdQuery;
 import com.dymbia.sumaqagro.platform.profiles.domain.model.queries.GetProfileByUserIdQuery;
 import com.dymbia.sumaqagro.platform.profiles.interfaces.rest.resources.ProfileResource;
@@ -72,7 +71,8 @@ public class ProfilesController {
 
     @GetMapping
     @Operation(summary = "Get profiles",
-            description = "Retrieves all profiles, or the profile of one user when 'userId' is sent. Always returns a list.")
+            description = "Returns the profile of the user given in 'userId', or the caller's own profile when it is not sent. "
+                    + "Always returns a list. The phone, email and DNI are only shown to the owner; other users only see the name.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Profiles retrieved",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProfileResource.class)))),
@@ -83,9 +83,11 @@ public class ProfilesController {
             @Parameter(description = "IAM user id (optional filter)", example = "1")
             Long userId,
             @AuthenticationPrincipal UserDetailsImpl principal) {
-        List<Profile> profiles = userId != null
-                ? profileQueryService.handle(new GetProfileByUserIdQuery(userId)).map(profile -> List.of(profile)).orElse(List.of())
-                : profileQueryService.handle(new GetAllProfilesQuery());
+        // The whole directory of users is never listed: only one profile, the caller's own by default
+        var requested = userId != null ? userId : (principal != null ? principal.getId() : null);
+        List<Profile> profiles = requested == null
+                ? List.of()
+                : profileQueryService.handle(new GetProfileByUserIdQuery(requested)).map(List::of).orElse(List.of());
         return ResponseEntity.ok(profiles.stream().map(profile -> toResource(profile, principal)).toList());
     }
 
@@ -118,8 +120,9 @@ public class ProfilesController {
     }
 
     private ProfileResource toResource(Profile profile, UserDetailsImpl principal) {
-        var email = externalIamService.fetchEmailByUserId(profile.getUserId()).orElse(null);
         var owner = principal != null && profile.getUserId().equals(principal.getId());
+        // The email is only read from IAM for the owner, the only one who sees it
+        var email = owner ? externalIamService.fetchEmailByUserId(profile.getUserId()).orElse(null) : null;
         return ProfileResourceFromEntityAssembler.toResourceFromEntity(profile, email, owner);
     }
 }

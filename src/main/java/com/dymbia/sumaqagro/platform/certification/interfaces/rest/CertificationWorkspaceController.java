@@ -1,5 +1,7 @@
 package com.dymbia.sumaqagro.platform.certification.interfaces.rest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dymbia.sumaqagro.platform.certification.domain.model.aggregates.HarvestBatch;
 import com.dymbia.sumaqagro.platform.certification.domain.model.valueobjects.CertificateStatus;
 import com.dymbia.sumaqagro.platform.certification.application.queryservices.HarvestCertificationQueryService;
@@ -42,6 +44,9 @@ public class CertificationWorkspaceController {
         this.publicBaseUrl = publicBaseUrl;
     }
 
+    @Tag(name = "Harvest Batches")
+    @Operation(summary = "Get the harvest batches of a cooperative",
+            description = "Batches of the cooperative with their grading and certificate state, for the certification workspace.")
     @GetMapping(value = "/harvest-batches", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<BatchEntry>> list(@RequestParam Long cooperativeId,
                                                   @AuthenticationPrincipal UserDetailsImpl principal) {
@@ -63,6 +68,9 @@ public class CertificationWorkspaceController {
     }
 
     // The PDF is a sub-resource of one certificate, so it hangs from the certificate id
+    @Tag(name = "Quality Certificates")
+    @Operation(summary = "Download a quality certificate",
+            description = "Returns the PDF of the certificate with its verification QR code.")
     @GetMapping(value = "/quality-certificates/{qualityCertificateId}/document",
             produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> download(@PathVariable Long qualityCertificateId,

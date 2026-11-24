@@ -125,4 +125,15 @@ class CooperativeTests {
         assertThrows(IllegalArgumentException.class, () ->
                 cooperative.inviteAgronomist(new InviteAgronomistCommand(1L, 3L, "LUCIA@agro.pe"), null));
     }
+
+    @Test
+    void onlyAcceptedAgronomistsBelongToTheTechnicalTeam() {
+        var cooperative = newCooperative();
+        cooperative.inviteAgronomist(new InviteAgronomistCommand(1L, 3L, "lucia@agro.pe"), 7L);
+        cooperative.inviteAgronomist(new InviteAgronomistCommand(1L, 3L, "pendiente@agro.pe"), null);
+
+        assertTrue(cooperative.hasAgronomistInTeam(7L));
+        assertFalse(cooperative.hasAgronomistInTeam(8L));
+        assertFalse(cooperative.hasAgronomistInTeam(null));
+    }
 }

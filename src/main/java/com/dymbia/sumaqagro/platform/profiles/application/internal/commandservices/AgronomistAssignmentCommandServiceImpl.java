@@ -62,6 +62,9 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
                 return Result.failure(ApplicationError.validationError(
                         "agronomistUserId", "The user is not registered as an agronomist"));
             }
+            if (!cooperativeOptional.get().hasAgronomistInTeam(command.agronomistUserId())) {
+                return Result.failure(notInTeam());
+            }
             if (agronomistAssignmentRepository.existsActiveByPlotId(command.plotId())) {
                 return Result.failure(ApplicationError.conflict(
                         "AgronomistAssignment", "Plot already has an active agronomist assignment"));
@@ -94,6 +97,12 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
                         "agronomistUserId", "The user is not registered as an agronomist"));
             }
             var current = assignmentOptional.get();
+            var inTeam = cooperativeRepository.findById(current.getCooperativeId())
+                    .map(cooperative -> cooperative.hasAgronomistInTeam(command.agronomistUserId()))
+                    .orElse(false);
+            if (!inTeam) {
+                return Result.failure(notInTeam());
+            }
             if (!command.agronomistUserId().equals(current.getAgronomistUserId())) {
                 var quotaError = checkAdvisorQuota(command.agronomistUserId());
                 if (quotaError.isPresent()) {
@@ -107,6 +116,12 @@ public class AgronomistAssignmentCommandServiceImpl implements AgronomistAssignm
         } catch (Exception e) {
             return Result.failure(ApplicationError.unexpected("Reassign agronomist", e.getMessage()));
         }
+    }
+
+    private static ApplicationError notInTeam() {
+        return ApplicationError.businessRuleViolation(
+                "agronomist-not-in-team",
+                "The agronomist is not part of the technical team of the cooperative");
     }
 
     private Optional<ApplicationError> checkAdvisorQuota(Long agronomistUserId) {

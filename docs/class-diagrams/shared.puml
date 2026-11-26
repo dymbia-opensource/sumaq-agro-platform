@@ -1,0 +1,233 @@
+@startuml
+' SumaqAgro Platform - Shared Kernel Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
+
+
+title
+  <b>SumaqAgro Platform - Shared Kernel</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Result | RFC 9457 Problem Details | Domain Events | i18n | Project Loom</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
+
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
+}
+
+' Diagram Legend
+
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' Shared Kernel
+
+package "com.dymbia.sumaqagro.platform.shared" {
+
+  package "interfaces.rest" {
+    class GlobalExceptionHandler <<exception handler>> {
+      #handleMethodArgumentNotValid(ex: MethodArgumentNotValidException, headers: HttpHeaders, status: HttpStatusCode, request: WebRequest): ResponseEntity<Object>
+      +handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ProblemDetail>
+      +handleAccessDeniedException(ex: AccessDeniedException): ResponseEntity<ProblemDetail>
+      +handleAuthenticationException(ex: AuthenticationException): ResponseEntity<ProblemDetail>
+      +handleRuntimeException(ex: RuntimeException): ResponseEntity<ProblemDetail>
+      +handleException(ex: Exception): ResponseEntity<ProblemDetail>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class MessageResource <<record>> {
+      +message: String
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class ProblemDetailFromApplicationErrorAssembler <<assembler>> {
+      +{static} toProblemDetailFromApplicationError(error: ApplicationError): ProblemDetail
+      +{static} toResponseFromApplicationError(error: ApplicationError): ResponseEntity<ProblemDetail>
+      +{static} toStatusFromErrorCode(errorCode: String): HttpStatusCode
+    }
+
+    class ResponseEntityAssembler <<assembler>> {
+      +{static} toResponseEntityFromResult(result: Result<T, ApplicationError>, successResourceAssembler: Function<T, R>, successStatus: HttpStatusCode): ResponseEntity<?>
+    }
+  }
+
+  package "application.outboundservices.email" {
+    interface EmailSender <<port>> {
+      +send(recipientEmail: String, subject: String, htmlContent: String): void
+      +isEnabled(): boolean
+    }
+  }
+
+  package "application.result" {
+    class ApplicationError <<record>> {
+      +code: String
+      +message: String
+      +details: String
+      +{static} validationError(fieldOrConcept: String, reason: String): ApplicationError
+      +{static} notFound(resourceType: String, identifier: String): ApplicationError
+      +{static} businessRuleViolation(rule: String, reason: String): ApplicationError
+      +{static} conflict(resource: String, reason: String): ApplicationError
+      +{static} unexpected(context: String, reason: String): ApplicationError
+    }
+
+    interface Result<T, E> <<sealed utility>> {
+      +{static} success(value: T): Result<T, E>
+      +{static} failure(error: E): Result<T, E>
+      +isSuccess(): boolean
+      +isFailure(): boolean
+      +toOptional(): Optional<T>
+      +getOrElse(defaultValue: T): T
+      +mapError(f: Function<E, E2>): Result<T, E2>
+      +flatMap(f: Function<T, Result<T2, E>>): Result<T2, E>
+      +map(f: Function<T, T2>): Result<T2, E>
+      +recover(f: Function<E, Result<T, E>>): Result<T, E>
+    }
+  }
+
+  package "domain.model.aggregates" {
+    abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+      #registerDomainEvent(event: Object): void
+      +domainEvents(): Collection<Object>
+      +clearDomainEvents(): void
+    }
+  }
+
+  package "infrastructure.concurrency.loom.configuration" {
+    class VirtualThreadsConfiguration <<configuration>> {
+      +applicationTaskExecutor(): TaskExecutor
+    }
+  }
+
+  package "infrastructure.documentation.openapi.configuration" {
+    class OpenApiConfiguration <<configuration>>
+  }
+
+  package "infrastructure.email" {
+    class DisabledEmailSender <<adapter>> {
+      +send(recipientEmail: String, subject: String, htmlContent: String): void
+      +isEnabled(): boolean
+    }
+  }
+
+  package "infrastructure.email.brevo" {
+    class BrevoEmailSender <<adapter>> {
+      -client: RestClient
+      -senderEmail: String
+      -senderName: String
+    }
+  }
+
+  package "infrastructure.events" {
+    class DomainEventPublisher <<adapter>> {
+      -applicationEventPublisher: ApplicationEventPublisher
+      +publishAndClearEvents(aggregate: T): void
+    }
+  }
+
+  package "infrastructure.i18n.configuration" {
+    class LocaleConfiguration <<configuration>> {
+      +localeResolver(): LocaleResolver
+    }
+  }
+
+  package "infrastructure.persistence.jpa.configuration.strategy" {
+    class JpaAuditingConfiguration <<configuration>>
+
+    class SnakeCaseWithPluralizedTablePhysicalNamingStrategy <<configuration>> {
+      +toPhysicalCatalogName(identifier: Identifier, jdbcEnvironment: JdbcEnvironment): Identifier
+      +toPhysicalSchemaName(identifier: Identifier, jdbcEnvironment: JdbcEnvironment): Identifier
+      +toPhysicalTableName(identifier: Identifier, jdbcEnvironment: JdbcEnvironment): Identifier
+      +toPhysicalSequenceName(identifier: Identifier, jdbcEnvironment: JdbcEnvironment): Identifier
+      +toPhysicalColumnName(identifier: Identifier, jdbcEnvironment: JdbcEnvironment): Identifier
+    }
+  }
+
+  package "infrastructure.persistence.jpa.entities" {
+    abstract class AuditableAbstractPersistenceEntity <<base entity>> {
+      -id: Long
+      -createdAt: Instant
+      -updatedAt: Instant
+    }
+  }
+}
+
+' Relationships
+
+' --- Shared Kernel Relationships ---
+DisabledEmailSender ..|> EmailSender
+BrevoEmailSender ..|> EmailSender
+ProblemDetailFromApplicationErrorAssembler ..> ApplicationError
+ResponseEntityAssembler ..> ApplicationError
+ResponseEntityAssembler ..> Result
+
+@enduml

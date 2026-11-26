@@ -1,41 +1,960 @@
 @startuml
-title Farming — Domain Model
+' SumaqAgro Platform - Field Management (Farming) Bounded Context Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
+
+
+title
+  <b>SumaqAgro Platform - Field Management (Farming) Bounded Context</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Field Plots | Crop Campaigns | Campaign Ledger | AgroMonitoring</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
 skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
 
-class FieldPlot <<Aggregate Root>> {
-  - id: Long
-  - ownerUserId: Long
-  - name: String
-  - region: String
-  - areaHectares: BigDecimal
-  - agroMonitoringPolygonId: String
-  + delineateBoundary(boundary: PlotBoundary): void
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
 }
 
-class CropCampaign <<Aggregate Root>> {
-  - id: Long
-  - fieldPlotId: FieldPlotId
+' Diagram Legend
+
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' Field Management (Farming) Bounded Context
+
+package "com.dymbia.sumaqagro.platform.farming" {
+
+  package "interfaces.acl" {
+    interface FarmingContextFacade <<facade>> {
+      +fetchOwnerUserIdByFieldPlotId(fieldPlotId: Long): Long
+      +existsFieldPlotById(fieldPlotId: Long): boolean
+      +fetchAgroMonitoringPolygonIdByFieldPlotId(fieldPlotId: Long): String
+      +fetchFieldPlotNameById(fieldPlotId: Long): String
+      +fetchFieldPlotRegionById(fieldPlotId: Long): String
+      +fetchOwnerUserIdsByRegion(region: String): List<Long>
+    }
+  }
+
+  package "interfaces.rest" {
+    class CampaignLedgersController <<controller>> {
+      -campaignLedgerCommandService: CampaignLedgerCommandService
+      -campaignLedgerQueryService: CampaignLedgerQueryService
+      +getCampaignLedgerById(campaignLedgerId: Long): ResponseEntity<?>
+      +recordInputExpense(campaignLedgerId: Long, resource: RecordInputExpenseResource): ResponseEntity<?>
+      +recordDailyLaborExpense(campaignLedgerId: Long, resource: RecordDailyLaborExpenseResource): ResponseEntity<?>
+      +recordFieldFreightExpense(campaignLedgerId: Long, resource: RecordFieldFreightExpenseResource): ResponseEntity<?>
+      +estimateCampaignYield(campaignLedgerId: Long, resource: EstimateCampaignYieldResource): ResponseEntity<?>
+    }
+
+    class CropCampaignLedgerController <<controller>> {
+      -campaignLedgerQueryService: CampaignLedgerQueryService
+      +getCampaignLedgerByCropCampaignId(cropCampaignId: Long): ResponseEntity<?>
+    }
+
+    class CropCampaignsController <<controller>> {
+      -cropCampaignCommandService: CropCampaignCommandService
+      -cropCampaignQueryService: CropCampaignQueryService
+      +startCropCampaign(resource: StartCropCampaignResource): ResponseEntity<?>
+      +getCropCampaignById(cropCampaignId: Long): ResponseEntity<?>
+      +updateCropCampaign(cropCampaignId: Long, resource: UpdateCropCampaignResource): ResponseEntity<?>
+      +closeCropCampaign(cropCampaignId: Long): ResponseEntity<?>
+    }
+
+    class FieldPlotCropCampaignsController <<controller>> {
+      -cropCampaignQueryService: CropCampaignQueryService
+      +getCropCampaignsByFieldPlotId(fieldPlotId: Long): ResponseEntity<List<CropCampaignResource>>
+    }
+
+    class FieldPlotsController <<controller>> {
+      -fieldPlotCommandService: FieldPlotCommandService
+      -fieldPlotQueryService: FieldPlotQueryService
+      +registerFieldPlot(principal: UserDetailsImpl, resource: RegisterFieldPlotResource): ResponseEntity<?>
+      +getFieldPlotById(fieldPlotId: Long): ResponseEntity<?>
+      +getFieldPlotsByOwnerUserId(ownerUserId: Long): ResponseEntity<List<FieldPlotResource>>
+      +delineateBoundary(fieldPlotId: Long, resource: DelineatePlotBoundaryResource): ResponseEntity<?>
+      +recordSoilBaseline(fieldPlotId: Long, resource: SoilBaselineResource): ResponseEntity<?>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class CampaignLedgerResource <<record>> {
+      +id: Long
+      +cropCampaignId: Long
+      +yieldUnit: String
+      +expectedYield: BigDecimal
+      +actualYield: BigDecimal
+      +frozen: boolean
+      +currency: String
+      +totalInvestment: BigDecimal
+      +breakevenPrice: BigDecimal
+      +entries: List<ExpenseEntryResource>
+    }
+
+    class CropCampaignResource <<record>> {
+      +id: Long
+      +fieldPlotId: Long
+      +season: String
+      +cropType: String
+      +seedVariety: String
+      +customSeedVariety: boolean
+      +sowingDate: LocalDate
+      +status: String
+    }
+
+    class DelineatePlotBoundaryResource <<record>> {
+      +coordinates: List<GeoCoordinateResource>
+    }
+
+    class EstimateCampaignYieldResource <<record>> {
+      +expectedYield: BigDecimal
+      +actualYield: BigDecimal
+    }
+
+    class ExpenseEntryResource <<record>> {
+      +id: Long
+      +category: String
+      +description: String
+      +quantity: BigDecimal
+      +unitPrice: BigDecimal
+      +total: BigDecimal
+      +expenseDate: LocalDate
+      +notes: String
+      +clientSyncId: String
+    }
+
+    class FieldPlotResource <<record>> {
+      +id: Long
+      +ownerUserId: Long
+      +name: String
+      +region: String
+      +status: String
+      +areaHectares: BigDecimal
+      +agroMonitoringPolygonId: String
+      +boundary: List<GeoCoordinateResource>
+      +soilBaseline: SoilBaselineResource
+      +cooperativeId: Long
+      +cooperativeMemberId: Long
+    }
+
+    class GeoCoordinateResource <<record>> {
+      +latitude: Double
+      +longitude: Double
+    }
+
+    class RecordDailyLaborExpenseResource <<record>> {
+      +activity: String
+      +workers: Integer
+      +days: Integer
+      +dailyWage: BigDecimal
+      +expenseDate: LocalDate
+      +clientSyncId: String
+    }
+
+    class RecordFieldFreightExpenseResource <<record>> {
+      +route: String
+      +cost: BigDecimal
+      +expenseDate: LocalDate
+      +clientSyncId: String
+    }
+
+    class RecordInputExpenseResource <<record>> {
+      +inputName: String
+      +quantity: BigDecimal
+      +unitPrice: BigDecimal
+      +expenseDate: LocalDate
+      +clientSyncId: String
+    }
+
+    class RegisterFieldPlotResource <<record>> {
+      +ownerUserId: Long
+      +name: String
+      +region: String
+      +areaHectares: BigDecimal
+      +cooperativeId: Long
+      +cooperativeMemberId: Long
+    }
+
+    class SoilBaselineResource <<record>> {
+      +ph: BigDecimal
+      +texture: String
+      +organicMatterPercentage: BigDecimal
+      +recordedAt: LocalDate
+    }
+
+    class StartCropCampaignResource <<record>> {
+      +fieldPlotId: Long
+      +season: String
+      +cropType: String
+      +seedVariety: String
+      +customSeedVariety: boolean
+      +sowingDate: LocalDate
+    }
+
+    class UpdateCropCampaignResource <<record>> {
+      +cropType: String
+      +seedVariety: String
+      +customSeedVariety: Boolean
+      +sowingDate: LocalDate
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class CampaignLedgerResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: CampaignLedger): CampaignLedgerResource
+    }
+
+    class CropCampaignResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: CropCampaign): CropCampaignResource
+    }
+
+    class CropTypeFromResourceAssembler <<assembler>> {
+      +{static} toCropTypeFromResource(cropType: String): CropType
+    }
+
+    class DelineatePlotBoundaryCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(fieldPlotId: Long, resource: DelineatePlotBoundaryResource): DelineatePlotBoundaryCommand
+    }
+
+    class EstimateCampaignYieldCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(campaignLedgerId: Long, resource: EstimateCampaignYieldResource): EstimateCampaignYieldCommand
+    }
+
+    class FieldPlotResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: FieldPlot): FieldPlotResource
+    }
+
+    class RecordDailyLaborExpenseCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(campaignLedgerId: Long, resource: RecordDailyLaborExpenseResource): RecordDailyLaborExpenseCommand
+    }
+
+    class RecordFieldFreightExpenseCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(campaignLedgerId: Long, resource: RecordFieldFreightExpenseResource): RecordFieldFreightExpenseCommand
+    }
+
+    class RecordInputExpenseCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(campaignLedgerId: Long, resource: RecordInputExpenseResource): RecordInputExpenseCommand
+    }
+
+    class RecordSoilBaselineCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(fieldPlotId: Long, resource: SoilBaselineResource): RecordSoilBaselineCommand
+    }
+
+    class RegisterFieldPlotCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: RegisterFieldPlotResource): RegisterFieldPlotCommand
+    }
+
+    class StartCropCampaignCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: StartCropCampaignResource): StartCropCampaignCommand
+    }
+
+    class UpdateCropCampaignCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(cropCampaignId: Long, resource: UpdateCropCampaignResource): UpdateCropCampaignCommand
+    }
+  }
+
+  package "application.acl" {
+    class FarmingContextFacadeImpl <<facade>> {
+      -fieldPlotQueryService: FieldPlotQueryService
+      +fetchOwnerUserIdByFieldPlotId(fieldPlotId: Long): Long
+      +existsFieldPlotById(fieldPlotId: Long): boolean
+      +fetchAgroMonitoringPolygonIdByFieldPlotId(fieldPlotId: Long): String
+      +fetchFieldPlotNameById(fieldPlotId: Long): String
+      +fetchFieldPlotRegionById(fieldPlotId: Long): String
+      +fetchOwnerUserIdsByRegion(region: String): List<Long>
+    }
+  }
+
+  package "application.commandservices" {
+    interface CampaignLedgerCommandService <<service>> {
+      +handle(command: OpenCampaignLedgerCommand): Result<Long, ApplicationError>
+      +handle(command: RecordInputExpenseCommand): Result<Long, ApplicationError>
+      +handle(command: RecordDailyLaborExpenseCommand): Result<Long, ApplicationError>
+      +handle(command: RecordFieldFreightExpenseCommand): Result<Long, ApplicationError>
+      +handle(command: EstimateCampaignYieldCommand): Result<Long, ApplicationError>
+      +handle(command: FreezeCampaignLedgerCommand): Result<Long, ApplicationError>
+    }
+
+    interface CropCampaignCommandService <<service>> {
+      +handle(command: StartCropCampaignCommand): Result<Long, ApplicationError>
+      +handle(command: UpdateCropCampaignCommand): Result<Long, ApplicationError>
+      +handle(command: CloseCropCampaignCommand): Result<Long, ApplicationError>
+    }
+
+    interface FieldPlotCommandService <<service>> {
+      +handle(command: RegisterFieldPlotCommand): Result<Long, ApplicationError>
+      +handle(command: DelineatePlotBoundaryCommand): Result<Long, ApplicationError>
+      +handle(command: LinkPlotPolygonCommand): Result<Long, ApplicationError>
+      +handle(command: RecordSoilBaselineCommand): Result<Long, ApplicationError>
+    }
+  }
+
+  package "application.internal.commandservices" {
+    class CampaignLedgerCommandServiceImpl <<service>> {
+      -campaignLedgerRepository: CampaignLedgerRepository
+      +handle(command: OpenCampaignLedgerCommand): Result<Long, ApplicationError>
+      +handle(command: RecordInputExpenseCommand): Result<Long, ApplicationError>
+      +handle(command: RecordDailyLaborExpenseCommand): Result<Long, ApplicationError>
+      +handle(command: RecordFieldFreightExpenseCommand): Result<Long, ApplicationError>
+      +handle(command: EstimateCampaignYieldCommand): Result<Long, ApplicationError>
+      +handle(command: FreezeCampaignLedgerCommand): Result<Long, ApplicationError>
+    }
+
+    class CropCampaignCommandServiceImpl <<service>> {
+      -cropCampaignRepository: CropCampaignRepository
+      -fieldPlotRepository: FieldPlotRepository
+      +handle(command: StartCropCampaignCommand): Result<Long, ApplicationError>
+      +handle(command: UpdateCropCampaignCommand): Result<Long, ApplicationError>
+      +handle(command: CloseCropCampaignCommand): Result<Long, ApplicationError>
+    }
+
+    class FieldPlotCommandServiceImpl <<service>> {
+      -fieldPlotRepository: FieldPlotRepository
+      -subscriptions: SubscriptionsContextFacade
+      -profiles: ProfilesContextFacade
+      -transaction: TransactionTemplate
+      +handle(command: RegisterFieldPlotCommand): Result<Long, ApplicationError>
+      +handle(command: DelineatePlotBoundaryCommand): Result<Long, ApplicationError>
+      +handle(command: LinkPlotPolygonCommand): Result<Long, ApplicationError>
+      +handle(command: RecordSoilBaselineCommand): Result<Long, ApplicationError>
+    }
+  }
+
+  package "application.internal.eventhandlers" {
+    class CropCampaignClosedEventHandler <<event handler>> {
+      -campaignLedgerCommandService: CampaignLedgerCommandService
+      +on(event: CropCampaignClosedEvent): void
+    }
+
+    class CropCampaignStartedEventHandler <<event handler>> {
+      -campaignLedgerCommandService: CampaignLedgerCommandService
+      +on(event: CropCampaignStartedEvent): void
+    }
+
+    class PlotBoundaryDelineatedEventHandler <<event handler>> {
+      -polygonMonitoringService: PolygonMonitoringService
+      -fieldPlotCommandService: FieldPlotCommandService
+      +on(event: PlotBoundaryDelineatedEvent): void
+    }
+  }
+
+  package "application.internal.outboundservices.monitoring" {
+    interface PolygonMonitoringService <<port>> {
+      +registerPolygon(plotName: String, boundary: PlotBoundary): Optional<String>
+      +removePolygon(polygonId: String): void
+    }
+  }
+
+  package "application.internal.queryservices" {
+    class CampaignLedgerQueryServiceImpl <<service>> {
+      -campaignLedgerRepository: CampaignLedgerRepository
+      +handle(query: GetCampaignLedgerByIdQuery): Optional<CampaignLedger>
+      +handle(query: GetCampaignLedgerByCropCampaignIdQuery): Optional<CampaignLedger>
+    }
+
+    class CropCampaignQueryServiceImpl <<service>> {
+      -cropCampaignRepository: CropCampaignRepository
+      +handle(query: GetCropCampaignByIdQuery): Optional<CropCampaign>
+      +handle(query: GetAllCropCampaignsByFieldPlotIdQuery): List<CropCampaign>
+    }
+
+    class FieldPlotQueryServiceImpl <<service>> {
+      -fieldPlotRepository: FieldPlotRepository
+      +handle(query: GetFieldPlotByIdQuery): Optional<FieldPlot>
+      +handle(query: GetAllFieldPlotsByOwnerUserIdQuery): List<FieldPlot>
+      +handle(query: GetAllFieldPlotsByRegionQuery): List<FieldPlot>
+    }
+  }
+
+  package "application.queryservices" {
+    interface CampaignLedgerQueryService <<service>> {
+      +handle(query: GetCampaignLedgerByIdQuery): Optional<CampaignLedger>
+      +handle(query: GetCampaignLedgerByCropCampaignIdQuery): Optional<CampaignLedger>
+    }
+
+    interface CropCampaignQueryService <<service>> {
+      +handle(query: GetCropCampaignByIdQuery): Optional<CropCampaign>
+      +handle(query: GetAllCropCampaignsByFieldPlotIdQuery): List<CropCampaign>
+    }
+
+    interface FieldPlotQueryService <<service>> {
+      +handle(query: GetFieldPlotByIdQuery): Optional<FieldPlot>
+      +handle(query: GetAllFieldPlotsByOwnerUserIdQuery): List<FieldPlot>
+      +handle(query: GetAllFieldPlotsByRegionQuery): List<FieldPlot>
+    }
+  }
+
+  package "domain.model.aggregates" {
+    class CampaignLedger <<aggregate>> {
+      -id: Long
+      -cropCampaignId: CropCampaignId
+      -yieldUnit: YieldUnit
+      -expectedYield: BigDecimal
+      -actualYield: BigDecimal
+      -frozen: boolean
+      -currency: String
+      -entries: List<ExpenseEntry>
+      +CampaignLedger(command: OpenCampaignLedgerCommand)
+      +{static} reconstitute(id: Long, cropCampaignId: CropCampaignId, yieldUnit: YieldUnit, expectedYield: BigDecimal, actualYield: BigDecimal, frozen: boolean, currency: String, entries: List<ExpenseEntry>): CampaignLedger
+      +recordInputExpense(inputName: String, quantity: BigDecimal, unitPrice: BigDecimal, expenseDate: LocalDate, clientSyncId: String): ExpenseEntry
+      +recordDailyLaborExpense(activity: String, workers: int, days: int, dailyWage: BigDecimal, expenseDate: LocalDate, clientSyncId: String): ExpenseEntry
+      +recordFieldFreightExpense(route: String, cost: BigDecimal, expenseDate: LocalDate, clientSyncId: String): ExpenseEntry
+      +estimateYield(expectedYield: BigDecimal, actualYield: BigDecimal): void
+      +freeze(): void
+      +totalInvestment(): Money
+      +totalByCategory(category: ExpenseCategory): Money
+      +referenceYield(): BigDecimal
+      +breakevenPrice(): Money
+    }
+
+    class CropCampaign <<aggregate>> {
+      -id: Long
+      -fieldPlotId: FieldPlotId
+      -season: String
+      -cropType: CropType
+      -seedVariety: SeedVariety
+      -seedVarietyCustom: boolean
+      -sowingDate: LocalDate
+      -status: CampaignStatus
+      +CropCampaign(command: StartCropCampaignCommand)
+      +{static} reconstitute(id: Long, fieldPlotId: FieldPlotId, season: String, cropType: CropType, seedVariety: SeedVariety, seedVarietyCustom: boolean, sowingDate: LocalDate, status: CampaignStatus): CropCampaign
+      +onStarted(): void
+      +selectCropType(cropType: CropType): void
+      +specifySeedVariety(seedVariety: SeedVariety, custom: boolean): void
+      +recordSowingDate(sowingDate: LocalDate): void
+      +close(): void
+      +isActive(): boolean
+      +isFinished(): boolean
+      +getFieldPlotIdValue(): Long
+    }
+
+    class FieldPlot <<aggregate>> {
+      -id: Long
+      -ownerUserId: Long
+      -cooperativeId: Long
+      -cooperativeMemberId: Long
+      -name: String
+      -region: String
+      -status: PlotStatus
+      -areaHectares: BigDecimal
+      -agroMonitoringPolygonId: String
+      -boundary: PlotBoundary
+      -soilBaseline: SoilBaseline
+      +FieldPlot(command: RegisterFieldPlotCommand)
+      +{static} reconstitute(id: Long, ownerUserId: Long, name: String, region: String, status: PlotStatus, areaHectares: BigDecimal, agroMonitoringPolygonId: String, boundary: PlotBoundary, soilBaseline: SoilBaseline): FieldPlot
+      +{static} reconstitute(id: Long, ownerUserId: Long, name: String, region: String, status: PlotStatus, areaHectares: BigDecimal, agroMonitoringPolygonId: String, boundary: PlotBoundary, soilBaseline: SoilBaseline, cooperativeId: Long, cooperativeMemberId: Long): FieldPlot
+      +delineateBoundary(boundary: PlotBoundary): void
+      +linkPolygon(polygonId: String): void
+      +hasPolygon(): boolean
+      +recordSoilBaseline(soilBaseline: SoilBaseline): void
+      +hasSoilBaseline(): boolean
+    }
+  }
+
+  package "domain.model.commands" {
+    class CloseCropCampaignCommand <<record>> {
+      +cropCampaignId: Long
+    }
+
+    class DelineatePlotBoundaryCommand <<record>> {
+      +fieldPlotId: Long
+      +boundary: PlotBoundary
+    }
+
+    class EstimateCampaignYieldCommand <<record>> {
+      +campaignLedgerId: Long
+      +expectedYield: BigDecimal
+      +actualYield: BigDecimal
+    }
+
+    class FreezeCampaignLedgerCommand <<record>> {
+      +cropCampaignId: Long
+    }
+
+    class LinkPlotPolygonCommand <<record>> {
+      +fieldPlotId: Long
+      +polygonId: String
+    }
+
+    class OpenCampaignLedgerCommand <<record>> {
+      +cropCampaignId: Long
+      +yieldUnit: YieldUnit
+    }
+
+    class RecordDailyLaborExpenseCommand <<record>> {
+      +campaignLedgerId: Long
+      +activity: String
+      +workers: Integer
+      +days: Integer
+      +dailyWage: BigDecimal
+      +expenseDate: LocalDate
+      +clientSyncId: String
+    }
+
+    class RecordFieldFreightExpenseCommand <<record>> {
+      +campaignLedgerId: Long
+      +route: String
+      +cost: BigDecimal
+      +expenseDate: LocalDate
+      +clientSyncId: String
+    }
+
+    class RecordInputExpenseCommand <<record>> {
+      +campaignLedgerId: Long
+      +inputName: String
+      +quantity: BigDecimal
+      +unitPrice: BigDecimal
+      +expenseDate: LocalDate
+      +clientSyncId: String
+    }
+
+    class RecordSoilBaselineCommand <<record>> {
+      +fieldPlotId: Long
+      +soilBaseline: SoilBaseline
+    }
+
+    class RegisterFieldPlotCommand <<record>> {
+      +ownerUserId: Long
+      +name: String
+      +region: String
+      +declaredAreaHectares: BigDecimal
+      +cooperativeId: Long
+      +cooperativeMemberId: Long
+    }
+
+    class StartCropCampaignCommand <<record>> {
+      +plotId: Long
+      +season: String
+      +cropType: CropType
+      +seedVariety: SeedVariety
+      +customSeedVariety: boolean
+      +sowingDate: LocalDate
+    }
+
+    class UpdateCropCampaignCommand <<record>> {
+      +cropCampaignId: Long
+      +cropType: CropType
+      +seedVariety: SeedVariety
+      +customSeedVariety: boolean
+      +sowingDate: LocalDate
+    }
+  }
+
+  package "domain.model.entities" {
+    class ExpenseEntry <<entity>> {
+      -id: Long
+      -category: ExpenseCategory
+      -description: String
+      -quantity: BigDecimal
+      -unitPrice: Money
+      -expenseDate: LocalDate
+      -notes: String
+      -clientSyncId: String
+      +ExpenseEntry(category: ExpenseCategory, description: String, quantity: BigDecimal, unitPrice: Money, expenseDate: LocalDate, notes: String, clientSyncId: String)
+      +{static} reconstitute(id: Long, category: ExpenseCategory, description: String, quantity: BigDecimal, unitPrice: Money, expenseDate: LocalDate, notes: String, clientSyncId: String): ExpenseEntry
+      +total(): Money
+      +hasClientSyncId(clientSyncId: String): boolean
+    }
+  }
+
+  package "domain.model.events" {
+    class CropCampaignClosedEvent <<domain event>> {
+      +cropCampaignId: Long
+    }
+
+    class CropCampaignStartedEvent <<domain event>> {
+      +cropCampaignId: Long
+      +cropType: CropType
+    }
+
+    class PlotBoundaryDelineatedEvent <<domain event>> {
+      +fieldPlotId: Long
+      +plotName: String
+      +boundary: PlotBoundary
+      +previousPolygonId: String
+    }
+
+    class SowingDateRecordedEvent <<domain event>> {
+      +fieldPlotId: Long
+      +sowingDate: LocalDate
+    }
+  }
+
+  package "domain.model.queries" {
+    class GetAllCropCampaignsByFieldPlotIdQuery <<record>> {
+      +fieldPlotId: Long
+    }
+
+    class GetAllFieldPlotsByOwnerUserIdQuery <<record>> {
+      +ownerUserId: Long
+    }
+
+    class GetAllFieldPlotsByRegionQuery <<record>> {
+      +region: String
+    }
+
+    class GetCampaignLedgerByCropCampaignIdQuery <<record>> {
+      +cropCampaignId: Long
+    }
+
+    class GetCampaignLedgerByIdQuery <<record>> {
+      +campaignLedgerId: Long
+    }
+
+    class GetCropCampaignByIdQuery <<record>> {
+      +cropCampaignId: Long
+    }
+
+    class GetFieldPlotByIdQuery <<record>> {
+      +fieldPlotId: Long
+    }
+  }
+
+  package "domain.model.valueobjects" {
+    enum CampaignStatus <<enum>> {
+      IN_PROGRESS
+      FINISHED
+    }
+
+    class CropCampaignId <<value object>> {
+      +cropCampaignId: Long
+    }
+
+    enum CropType <<enum>> {
+      ANDEAN_POTATO
+      SPECIALTY_COFFEE
+    }
+
+    enum ExpenseCategory <<enum>> {
+      INPUTS
+      LABOR
+      FREIGHT
+    }
+
+    class FieldPlotId <<value object>> {
+      +fieldPlotId: Long
+    }
+
+    class GeoCoordinate <<value object>> {
+      +latitude: double
+      +longitude: double
+    }
+
+    class Money <<value object>> {
+      +amount: BigDecimal
+      +currency: String
+      +{static} zero(currency: String): Money
+    }
+
+    class PlotBoundary <<value object>> {
+      +vertices: List<GeoCoordinate>
+    }
+
+    enum PlotStatus <<enum>> {
+      WITHOUT_POLYGON
+      ACTIVE_MONITORING
+    }
+
+    class SeedVariety <<value object>> {
+      +value: String
+    }
+
+    class SoilBaseline <<value object>> {
+      +ph: BigDecimal
+      +texture: SoilTexture
+      +organicMatterPercentage: BigDecimal
+      +recordedAt: LocalDate
+    }
+
+    enum SoilTexture <<enum>> {
+      SANDY
+      LOAMY
+      CLAY
+      SILTY
+      SANDY_LOAM
+      CLAY_LOAM
+    }
+
+    enum YieldUnit <<enum>> {
+      SACK
+      QUINTAL
+    }
+  }
+
+  package "domain.repositories" {
+    interface CampaignLedgerRepository <<repository>> {
+      +findById(id: Long): Optional<CampaignLedger>
+      +findByCropCampaignId(cropCampaignId: CropCampaignId): Optional<CampaignLedger>
+      +existsByCropCampaignId(cropCampaignId: CropCampaignId): boolean
+      +save(campaignLedger: CampaignLedger): CampaignLedger
+    }
+
+    interface CropCampaignRepository <<repository>> {
+      +findById(id: Long): Optional<CropCampaign>
+      +findAllByFieldPlotId(fieldPlotId: FieldPlotId): List<CropCampaign>
+      +existsByFieldPlotIdAndStatus(fieldPlotId: FieldPlotId, status: CampaignStatus): boolean
+      +save(cropCampaign: CropCampaign): CropCampaign
+    }
+
+    interface FieldPlotRepository <<repository>> {
+      +findById(id: Long): Optional<FieldPlot>
+      +findAllByOwnerUserId(ownerUserId: Long): List<FieldPlot>
+      +findAllByRegion(region: String): List<FieldPlot>
+      +countByOwnerUserId(ownerUserId: Long): long
+      +countByCooperativeId(cooperativeId: Long): long
+      +existsByOwnerUserIdAndName(ownerUserId: Long, name: String): boolean
+      +save(fieldPlot: FieldPlot): FieldPlot
+    }
+  }
+
+  package "infrastructure.agromonitoring.rest" {
+    class AgroMonitoringPolygonService <<adapter>> {
+      -restClient: RestClient
+      -apiKey: String
+      +registerPolygon(plotName: String, boundary: PlotBoundary): Optional<String>
+      +removePolygon(polygonId: String): void
+    }
+  }
+
+  package "infrastructure.agromonitoring.rest.resources" {
+    class AgroMonitoringPolygonRequest <<adapter>> {
+      +name: String
+      +geoJson: GeoJsonFeature
+      +{static} fromBoundary(name: String, boundary: PlotBoundary): AgroMonitoringPolygonRequest
+    }
+
+    class AgroMonitoringPolygonResponse <<adapter>> {
+      +id: String
+    }
+  }
+
+  package "infrastructure.persistence.jpa.adapters" {
+    class CampaignLedgerRepositoryImpl <<adapter>> {
+      -campaignLedgerPersistenceRepository: CampaignLedgerPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<CampaignLedger>
+      +findByCropCampaignId(cropCampaignId: CropCampaignId): Optional<CampaignLedger>
+      +existsByCropCampaignId(cropCampaignId: CropCampaignId): boolean
+      +save(campaignLedger: CampaignLedger): CampaignLedger
+    }
+
+    class CropCampaignRepositoryImpl <<adapter>> {
+      -cropCampaignPersistenceRepository: CropCampaignPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<CropCampaign>
+      +findAllByFieldPlotId(fieldPlotId: FieldPlotId): List<CropCampaign>
+      +existsByFieldPlotIdAndStatus(fieldPlotId: FieldPlotId, status: CampaignStatus): boolean
+      +save(cropCampaign: CropCampaign): CropCampaign
+    }
+
+    class FieldPlotRepositoryImpl <<adapter>> {
+      -fieldPlotPersistenceRepository: FieldPlotPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<FieldPlot>
+      +findAllByOwnerUserId(ownerUserId: Long): List<FieldPlot>
+      +findAllByRegion(region: String): List<FieldPlot>
+      +countByOwnerUserId(ownerUserId: Long): long
+      +countByCooperativeId(cooperativeId: Long): long
+      +existsByOwnerUserIdAndName(ownerUserId: Long, name: String): boolean
+      +save(fieldPlot: FieldPlot): FieldPlot
+    }
+  }
 }
 
-class FieldPlotId <<Value Object>>
-class PlotBoundary <<Value Object>>
-class GeoCoordinate <<Value Object>>
-class SoilBaseline <<Value Object>>
-class SeedVariety <<Value Object>>
+' Collaborators from other bounded contexts and the Shared Kernel
 
-enum PlotStatus
-enum CampaignStatus
-enum CropType
-enum SoilTexture
+package "com.dymbia.sumaqagro.platform.profiles.interfaces.acl" {
+  interface ProfilesContextFacade <<facade>> {
+    +managesCooperativeMember(directorId: long, cooperativeId: long, memberId: long): boolean
+  }
+}
 
-FieldPlot *-- "0..1" PlotBoundary
-PlotBoundary *-- "3..*" GeoCoordinate : vertices
-FieldPlot *-- "0..1" SoilBaseline
-FieldPlot --> PlotStatus
-SoilBaseline --> SoilTexture
-CropCampaign --> FieldPlotId
-FieldPlotId ..> FieldPlot : identifies
-CropCampaign --> CampaignStatus
+package "com.dymbia.sumaqagro.platform.shared.domain.model.aggregates" {
+  abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+    #registerDomainEvent(event: Object): void
+    +domainEvents(): Collection<Object>
+    +clearDomainEvents(): void
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.shared.infrastructure.events" {
+  class DomainEventPublisher <<component>> {
+    +publishAndClearEvents(aggregate: T): void
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.subscriptions.interfaces.acl" {
+  interface SubscriptionsContextFacade <<facade>> {
+    +lockSeedPlotLimit(userId: long): Optional<Integer>
+    +lockCooperativePlotLimit(userId: long): Optional<Integer>
+  }
+}
+
+' Relationships
+
+' --- Field Management (Farming) Bounded Context Relationships ---
+FarmingContextFacadeImpl ..|> FarmingContextFacade
+FarmingContextFacadeImpl --> FieldPlotQueryService
+CampaignLedgerCommandServiceImpl ..|> CampaignLedgerCommandService
+CampaignLedgerCommandServiceImpl --> CampaignLedgerRepository
+CropCampaignCommandServiceImpl ..|> CropCampaignCommandService
+CropCampaignCommandServiceImpl --> CropCampaignRepository
+CropCampaignCommandServiceImpl --> FieldPlotRepository
+FieldPlotCommandServiceImpl ..|> FieldPlotCommandService
+FieldPlotCommandServiceImpl --> FieldPlotRepository
+CropCampaignClosedEventHandler --> CampaignLedgerCommandService
+CropCampaignClosedEventHandler ..> CropCampaignClosedEvent : handles
+CropCampaignStartedEventHandler --> CampaignLedgerCommandService
+CropCampaignStartedEventHandler ..> CropCampaignStartedEvent : handles
+PlotBoundaryDelineatedEventHandler --> PolygonMonitoringService
+PlotBoundaryDelineatedEventHandler --> FieldPlotCommandService
+PlotBoundaryDelineatedEventHandler ..> PlotBoundaryDelineatedEvent : handles
+CampaignLedgerQueryServiceImpl ..|> CampaignLedgerQueryService
+CampaignLedgerQueryServiceImpl --> CampaignLedgerRepository
+CropCampaignQueryServiceImpl ..|> CropCampaignQueryService
+CropCampaignQueryServiceImpl --> CropCampaignRepository
+FieldPlotQueryServiceImpl ..|> FieldPlotQueryService
+FieldPlotQueryServiceImpl --> FieldPlotRepository
+CampaignLedger --|> AbstractDomainAggregateRoot
+CampaignLedger *-- CropCampaignId
+CampaignLedger --> YieldUnit
+CampaignLedger "1" *-- "*" ExpenseEntry
+CropCampaign --|> AbstractDomainAggregateRoot
+CropCampaign *-- FieldPlotId
 CropCampaign --> CropType
-CropCampaign --> SeedVariety
+CropCampaign *-- SeedVariety
+CropCampaign --> CampaignStatus
+CropCampaign ..> CropCampaignClosedEvent : registers
+CropCampaign ..> CropCampaignStartedEvent : registers
+CropCampaign ..> SowingDateRecordedEvent : registers
+FieldPlot --|> AbstractDomainAggregateRoot
+FieldPlot --> PlotStatus
+FieldPlot *-- PlotBoundary
+FieldPlot *-- SoilBaseline
+FieldPlot ..> PlotBoundaryDelineatedEvent : registers
+DelineatePlotBoundaryCommand --> PlotBoundary
+OpenCampaignLedgerCommand --> YieldUnit
+RecordSoilBaselineCommand --> SoilBaseline
+StartCropCampaignCommand --> CropType
+StartCropCampaignCommand --> SeedVariety
+UpdateCropCampaignCommand --> CropType
+UpdateCropCampaignCommand --> SeedVariety
+ExpenseEntry --> ExpenseCategory
+ExpenseEntry *-- Money
+CropCampaignStartedEvent --> CropType
+PlotBoundaryDelineatedEvent --> PlotBoundary
+PlotBoundary --> GeoCoordinate
+SoilBaseline --> SoilTexture
+AgroMonitoringPolygonService ..|> PolygonMonitoringService
+CampaignLedgerRepositoryImpl ..|> CampaignLedgerRepository
+CampaignLedgerRepositoryImpl --> DomainEventPublisher
+CropCampaignRepositoryImpl ..|> CropCampaignRepository
+CropCampaignRepositoryImpl --> DomainEventPublisher
+FieldPlotRepositoryImpl ..|> FieldPlotRepository
+FieldPlotRepositoryImpl --> DomainEventPublisher
+CampaignLedgersController --> CampaignLedgerCommandService
+CampaignLedgersController --> CampaignLedgerQueryService
+CropCampaignLedgerController --> CampaignLedgerQueryService
+CropCampaignsController --> CropCampaignCommandService
+CropCampaignsController --> CropCampaignQueryService
+FieldPlotCropCampaignsController --> CropCampaignQueryService
+FieldPlotsController --> FieldPlotCommandService
+FieldPlotsController --> FieldPlotQueryService
+CampaignLedgerResourceFromEntityAssembler ..> CampaignLedger
+CampaignLedgerResourceFromEntityAssembler ..> CampaignLedgerResource
+CropCampaignResourceFromEntityAssembler ..> CropCampaign
+CropCampaignResourceFromEntityAssembler ..> CropCampaignResource
+CropTypeFromResourceAssembler ..> CropType
+DelineatePlotBoundaryCommandFromResourceAssembler ..> DelineatePlotBoundaryCommand
+DelineatePlotBoundaryCommandFromResourceAssembler ..> DelineatePlotBoundaryResource
+EstimateCampaignYieldCommandFromResourceAssembler ..> EstimateCampaignYieldCommand
+EstimateCampaignYieldCommandFromResourceAssembler ..> EstimateCampaignYieldResource
+FieldPlotResourceFromEntityAssembler ..> FieldPlot
+FieldPlotResourceFromEntityAssembler ..> FieldPlotResource
+RecordDailyLaborExpenseCommandFromResourceAssembler ..> RecordDailyLaborExpenseCommand
+RecordDailyLaborExpenseCommandFromResourceAssembler ..> RecordDailyLaborExpenseResource
+RecordFieldFreightExpenseCommandFromResourceAssembler ..> RecordFieldFreightExpenseCommand
+RecordFieldFreightExpenseCommandFromResourceAssembler ..> RecordFieldFreightExpenseResource
+RecordInputExpenseCommandFromResourceAssembler ..> RecordInputExpenseCommand
+RecordInputExpenseCommandFromResourceAssembler ..> RecordInputExpenseResource
+RecordSoilBaselineCommandFromResourceAssembler ..> RecordSoilBaselineCommand
+RecordSoilBaselineCommandFromResourceAssembler ..> SoilBaselineResource
+RegisterFieldPlotCommandFromResourceAssembler ..> RegisterFieldPlotCommand
+RegisterFieldPlotCommandFromResourceAssembler ..> RegisterFieldPlotResource
+StartCropCampaignCommandFromResourceAssembler ..> StartCropCampaignCommand
+StartCropCampaignCommandFromResourceAssembler ..> StartCropCampaignResource
+UpdateCropCampaignCommandFromResourceAssembler ..> UpdateCropCampaignCommand
+UpdateCropCampaignCommandFromResourceAssembler ..> UpdateCropCampaignResource
+
+' --- Cross-Context Invocations ---
+FieldPlotCommandServiceImpl ..> SubscriptionsContextFacade : cross-context sync (ACL)
+FieldPlotCommandServiceImpl ..> ProfilesContextFacade : cross-context sync (ACL)
+
 @enduml

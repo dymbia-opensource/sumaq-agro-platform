@@ -1,76 +1,521 @@
 @startuml
-title Subscriptions and Payments — Domain Model
+' SumaqAgro Platform - Subscriptions and Payments Bounded Context Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
+
+
+title
+  <b>SumaqAgro Platform - Subscriptions and Payments Bounded Context</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Plans | Subscriptions | Mercado Pago Checkout Pro</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
 skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
 
-class Subscription <<Aggregate Root>> {
-  - id: Long
-  - userId: long
-  - planCode: PlanCode
-  - billingCycle: BillingCycle
-  - status: SubscriptionStatus
-  + renew(cycle: BillingCycle, approvedOn: LocalDate): void
-  + cancelRenewal(): void
-  + hasAccessOn(date: LocalDate): boolean
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
 }
 
-class Plan <<Catalog Entity>> {
-  - code: PlanCode
-  - monthlyPrice: BigDecimal
-  - annualPrice: BigDecimal
-  - registeredPlotLimit: int
-  - producerLimit: int
-  - supervisedPlotLimit: int
-  + priceFor(cycle: BillingCycle): BigDecimal
+' Diagram Legend
+
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' Subscriptions and Payments Bounded Context
+
+package "com.dymbia.sumaqagro.platform.subscriptions" {
+
+  package "interfaces.acl" {
+    interface SubscriptionsContextFacade <<facade>> {
+      +lockSeedPlotLimit(userId: long): Optional<Integer>
+      +lockCooperativeMemberLimit(userId: long): Optional<Integer>
+      +lockCooperativePlotLimit(userId: long): Optional<Integer>
+      +lockAdvisorPlotLimit(userId: long): Optional<Integer>
+    }
+  }
+
+  package "interfaces.rest" {
+    class CheckoutController <<controller>> {
+      -subscriptionCommandService: SubscriptionCommandService
+      +checkout(principal: UserDetailsImpl, resource: CheckoutResource): ResponseEntity<?>
+    }
+
+    class PaymentCheckoutsController <<controller>> {
+      -subscriptionCommandService: SubscriptionCommandService
+      +startPaymentCheckout(principal: UserDetailsImpl, resource: StartPaymentCheckoutResource): ResponseEntity<?>
+      +confirmPayment(principal: UserDetailsImpl, resource: ConfirmPaymentResource): ResponseEntity<?>
+    }
+
+    class PaymentNotificationsController <<controller>> {
+      -subscriptionCommandService: SubscriptionCommandService
+      +receive(type: String, topic: String, dataId: String, id: String, body: Map<String, Object>): ResponseEntity<Void>
+    }
+
+    class PlanSelectionAccess <<component>>
+
+    class PlansController <<controller>> {
+      -planQueryService: PlanQueryService
+      +getAllPlans(): List<PlanResource>
+    }
+
+    class SubscriptionsController <<controller>> {
+      -subscriptionQueryService: SubscriptionQueryService
+      -subscriptionCommandService: SubscriptionCommandService
+      +cancelMySubscription(principal: UserDetailsImpl): ResponseEntity<?>
+      +getMySubscription(principal: UserDetailsImpl): ResponseEntity<SubscriptionResource>
+      +getMyPayments(principal: UserDetailsImpl): List<PaymentResource>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class CheckoutResource <<record>> {
+      +planCode: PlanCode
+      +billingCycle: BillingCycle
+      +simulatedOutcome: PaymentStatus
+    }
+
+    class ConfirmPaymentResource <<record>> {
+      +paymentId: String
+    }
+
+    class PaymentCheckoutResource <<record>> {
+      +reference: String
+      +amount: BigDecimal
+      +currency: String
+      +checkoutUrl: URI
+      +sandboxCheckoutUrl: URI
+    }
+
+    class PaymentResource <<record>> {
+      +reference: String
+      +subscriptionId: Long
+      +planCode: String
+      +billingCycle: String
+      +amount: BigDecimal
+      +currency: String
+      +status: String
+      +attemptedAt: Instant
+    }
+
+    class PlanResource <<record>> {
+      +code: String
+      +monthlyPrice: BigDecimal
+      +annualPrice: BigDecimal
+      +currency: String
+      +registeredPlotLimit: int
+      +producerLimit: int
+      +supervisedPlotLimit: int
+    }
+
+    class StartPaymentCheckoutResource <<record>> {
+      +planCode: PlanCode
+      +billingCycle: BillingCycle
+    }
+
+    class SubscriptionResource <<record>> {
+      +id: Long
+      +planCode: String
+      +billingCycle: String
+      +status: String
+      +startDate: LocalDate
+      +endDate: LocalDate
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class PaymentResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(payment: Payment): PaymentResource
+    }
+
+    class PlanResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(plan: Plan): PlanResource
+    }
+
+    class SubscriptionResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(subscription: Subscription): SubscriptionResource
+    }
+  }
+
+  package "application.acl" {
+    class SubscriptionsContextFacadeImpl <<facade>> {
+      -subscriptions: SubscriptionRepository
+      -plans: PlanRepository
+      +lockSeedPlotLimit(userId: long): Optional<Integer>
+      +lockCooperativeMemberLimit(userId: long): Optional<Integer>
+      +lockCooperativePlotLimit(userId: long): Optional<Integer>
+      +lockAdvisorPlotLimit(userId: long): Optional<Integer>
+    }
+  }
+
+  package "application.commandservices" {
+    interface PlanCommandService <<service>> {
+      +handle(command: SeedPlansCommand): void
+    }
+
+    interface SubscriptionCommandService <<service>> {
+      +handle(command: PaymentCommand): Result<Payment, ApplicationError>
+      +handle(command: CancelSubscriptionCommand): Result<Subscription, ApplicationError>
+      +handle(command: StartPaymentCheckoutCommand): Result<PaymentCheckout, ApplicationError>
+      +handle(command: ConfirmPaymentCommand): Result<Payment, ApplicationError>
+      +PaymentCheckout(reference: String, amount: BigDecimal, currency: String, checkoutUrl: URI, sandboxCheckoutUrl: URI): record
+    }
+  }
+
+  package "application.internal.commandservices" {
+    class PlanCommandServiceImpl <<service>> {
+      -planRepository: PlanRepository
+      +handle(command: SeedPlansCommand): void
+    }
+
+    class SubscriptionCommandServiceImpl <<service>> {
+      -planRepository: PlanRepository
+      -subscriptionRepository: SubscriptionRepository
+      -paymentRepository: PaymentRepository
+      -paymentGateway: PaymentGateway
+      +handle(command: CancelSubscriptionCommand): Result<Subscription, ApplicationError>
+      +handle(command: PaymentCommand): Result<Payment, ApplicationError>
+      +handle(command: StartPaymentCheckoutCommand): Result<PaymentCheckout, ApplicationError>
+      +handle(command: ConfirmPaymentCommand): Result<Payment, ApplicationError>
+    }
+  }
+
+  package "application.internal.eventhandlers" {
+    class PlanCatalogReadyEventHandler <<event handler>> {
+      -planCommandService: PlanCommandService
+      +seedPlans(): void
+    }
+  }
+
+  package "application.internal.outboundservices.payments" {
+    interface PaymentGateway <<port>> {
+      +createCheckout(request: CheckoutRequest): CheckoutSession
+      +findPayment(providerPaymentId: String): Optional<ProviderPayment>
+      +CheckoutRequest(reference: String, title: String, amount: BigDecimal, currency: String): record
+      +CheckoutSession(providerCheckoutId: String, checkoutUrl: URI, sandboxCheckoutUrl: URI): record
+      +ProviderPayment(providerPaymentId: String, reference: String, status: ProviderPaymentStatus, amount: BigDecimal, currency: String): record
+    }
+  }
+
+  package "application.internal.queryservices" {
+    class PlanQueryServiceImpl <<service>> {
+      -planRepository: PlanRepository
+      +handle(query: GetAllPlansQuery): List<Plan>
+    }
+
+    class SubscriptionQueryServiceImpl <<service>> {
+      -subscriptionRepository: SubscriptionRepository
+      -paymentRepository: PaymentRepository
+      +handle(query: GetSubscriptionByUserIdQuery): Optional<Subscription>
+      +handle(query: GetPaymentsByUserIdQuery): List<Payment>
+    }
+  }
+
+  package "application.queryservices" {
+    interface PlanQueryService <<service>> {
+      +handle(query: GetAllPlansQuery): List<Plan>
+    }
+
+    interface SubscriptionQueryService <<service>> {
+      +handle(query: GetSubscriptionByUserIdQuery): Optional<Subscription>
+      +handle(query: GetPaymentsByUserIdQuery): List<Payment>
+    }
+  }
+
+  package "domain.commands" {
+    class CancelSubscriptionCommand <<record>> {
+      +userId: long
+    }
+
+    class ConfirmPaymentCommand <<record>> {
+      +providerPaymentId: String
+      +requestedByUserId: Long
+    }
+
+    class PaymentCommand <<record>> {
+      +userId: long
+      +selectedPlan: PlanCode
+      +billingCycle: BillingCycle
+      +simulatedOutcome: PaymentStatus
+    }
+
+    class SeedPlansCommand <<record>>
+
+    class StartPaymentCheckoutCommand <<record>> {
+      +userId: long
+      +selectedPlan: PlanCode
+      +billingCycle: BillingCycle
+    }
+  }
+
+  package "domain.model.aggregates" {
+    class Subscription <<aggregate>> {
+      -id: Long
+      -userId: long
+      -planCode: PlanCode
+      -billingCycle: BillingCycle
+      -period: SubscriptionPeriod
+      -status: SubscriptionStatus
+      +{static} activate(userId: long, planCode: PlanCode, cycle: BillingCycle, startDate: LocalDate): Subscription
+      +{static} reconstitute(id: long, userId: long, planCode: PlanCode, cycle: BillingCycle, period: SubscriptionPeriod, status: SubscriptionStatus): Subscription
+      +renew(cycle: BillingCycle, approvedOn: LocalDate): void
+      +cancelRenewal(): void
+      +hasAccessOn(date: LocalDate): boolean
+    }
+  }
+
+  package "domain.model.entities" {
+    class Payment <<entity>> {
+      +reference: String
+      +userId: long
+      +subscriptionId: Long
+      +planCode: PlanCode
+      +billingCycle: BillingCycle
+      +amount: BigDecimal
+      +status: PaymentStatus
+      +attemptedAt: Instant
+      +providerPaymentId: String
+      +{static} pending(reference: String, userId: long, planCode: PlanCode, billingCycle: BillingCycle, amount: BigDecimal, attemptedAt: Instant): Payment
+    }
+
+    class Plan <<entity>> {
+      -code: PlanCode
+      -monthlyPrice: BigDecimal
+      -annualPrice: BigDecimal
+      -registeredPlotLimit: int
+      -producerLimit: int
+      -supervisedPlotLimit: int
+      +Plan(code: PlanCode, monthlyPrice: BigDecimal, annualPrice: BigDecimal, registeredPlotLimit: int, producerLimit: int, supervisedPlotLimit: int)
+      +priceFor(cycle: BillingCycle): BigDecimal
+    }
+  }
+
+  package "domain.model.queries" {
+    class GetAllPlansQuery <<record>>
+
+    class GetPaymentsByUserIdQuery <<record>> {
+      +userId: long
+    }
+
+    class GetSubscriptionByUserIdQuery <<record>> {
+      +userId: long
+    }
+  }
+
+  package "domain.model.valueobjects" {
+    enum BillingCycle <<enum>> {
+      MONTHLY
+      ANNUAL
+    }
+
+    enum PaymentStatus <<enum>> {
+      PENDING
+      COMPLETED
+      REJECTED
+    }
+
+    enum PlanCode <<enum>> {
+      SEED
+      COOPERATIVE_PRO
+      TECHNICAL_ADVISOR
+    }
+
+    class SubscriptionPeriod <<value object>> {
+      +startDate: LocalDate
+      +endDate: LocalDate
+      +{static} startingOn(startDate: LocalDate, cycle: BillingCycle): SubscriptionPeriod
+    }
+
+    enum SubscriptionStatus <<enum>> {
+      ACTIVE
+      CANCELLED
+    }
+  }
+
+  package "domain.repositories" {
+    interface PaymentRepository <<repository>> {
+      +insert(payment: Payment): void
+      +findByUserId(userId: long): List<Payment>
+      +findByReferenceForUpdate(reference: String): Optional<Payment>
+      +update(payment: Payment): void
+    }
+
+    interface PlanRepository <<repository>> {
+      +existsByCode(code: PlanCode): boolean
+      +findAll(): List<Plan>
+      +insert(plan: Plan): void
+      +findByCode(code: PlanCode): Optional<Plan>
+    }
+
+    interface SubscriptionRepository <<repository>> {
+      +findByUserId(userId: long): Optional<Subscription>
+      +findByUserIdForUpdate(userId: long): Optional<Subscription>
+      +save(subscription: Subscription): Subscription
+    }
+  }
+
+  package "infrastructure.payments.mercadopago" {
+    class MercadoPagoPaymentGateway <<adapter>> {
+      -client: RestClient
+      -accessToken: String
+      -returnUrl: String
+      -notificationUrl: String
+      +createCheckout(request: CheckoutRequest): CheckoutSession
+    }
+  }
+
+  package "infrastructure.persistence.jpa.adapters" {
+    class PaymentRepositoryImpl <<adapter>> {
+      -persistenceRepository: PaymentPersistenceRepository
+      +insert(payment: Payment): void
+      +findByUserId(userId: long): List<Payment>
+      +findByReferenceForUpdate(reference: String): Optional<Payment>
+      +update(payment: Payment): void
+    }
+
+    class PlanRepositoryImpl <<adapter>> {
+      -planPersistenceRepository: PlanPersistenceRepository
+      +findByCode(code: PlanCode): Optional<Plan>
+      +existsByCode(code: PlanCode): boolean
+      +insert(plan: Plan): void
+      +findAll(): List<Plan>
+    }
+
+    class SubscriptionRepositoryImpl <<adapter>> {
+      -persistenceRepository: SubscriptionPersistenceRepository
+      +save(subscription: Subscription): Subscription
+      +findByUserId(userId: long): Optional<Subscription>
+      +findByUserIdForUpdate(userId: long): Optional<Subscription>
+    }
+  }
 }
 
-class Payment <<Record>> {
-  + reference: String
-  + userId: long
-  + subscriptionId: Long
-  + planCode: PlanCode
-  + billingCycle: BillingCycle
-  + amount: BigDecimal
-  + status: PaymentStatus
-  + attemptedAt: Instant
+' Collaborators from other bounded contexts and the Shared Kernel
+
+package "com.dymbia.sumaqagro.platform.shared.domain.model.aggregates" {
+  abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+    #registerDomainEvent(event: Object): void
+    +domainEvents(): Collection<Object>
+    +clearDomainEvents(): void
+  }
 }
 
-class SubscriptionPeriod <<Value Object>> {
-  + startDate: LocalDate
-  + endDate: LocalDate
-  + includes(date: LocalDate): boolean
-}
+' Relationships
 
-enum PlanCode {
-  SEED
-  COOPERATIVE_PRO
-  TECHNICAL_ADVISOR
-}
-
-enum BillingCycle {
-  MONTHLY
-  ANNUAL
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELLED
-}
-
-enum PaymentStatus {
-  COMPLETED
-  REJECTED
-}
-
-Subscription *-- "1" SubscriptionPeriod
-Subscription ..> Plan : planCode
+' --- Subscriptions and Payments Bounded Context Relationships ---
+SubscriptionsContextFacadeImpl ..|> SubscriptionsContextFacade
+SubscriptionsContextFacadeImpl --> SubscriptionRepository
+SubscriptionsContextFacadeImpl --> PlanRepository
+PlanCommandServiceImpl ..|> PlanCommandService
+PlanCommandServiceImpl --> PlanRepository
+SubscriptionCommandServiceImpl ..|> SubscriptionCommandService
+SubscriptionCommandServiceImpl --> PlanRepository
+SubscriptionCommandServiceImpl --> SubscriptionRepository
+SubscriptionCommandServiceImpl --> PaymentRepository
+SubscriptionCommandServiceImpl --> PaymentGateway
+PlanCatalogReadyEventHandler --> PlanCommandService
+PlanQueryServiceImpl ..|> PlanQueryService
+PlanQueryServiceImpl --> PlanRepository
+SubscriptionQueryServiceImpl ..|> SubscriptionQueryService
+SubscriptionQueryServiceImpl --> SubscriptionRepository
+SubscriptionQueryServiceImpl --> PaymentRepository
+PaymentCommand --> PlanCode
+PaymentCommand --> BillingCycle
+PaymentCommand --> PaymentStatus
+StartPaymentCheckoutCommand --> PlanCode
+StartPaymentCheckoutCommand --> BillingCycle
+Subscription --|> AbstractDomainAggregateRoot
+Subscription --> PlanCode
 Subscription --> BillingCycle
+Subscription *-- SubscriptionPeriod
 Subscription --> SubscriptionStatus
 Plan --> PlanCode
-Payment --> PaymentStatus
-Payment ..> "0..1" Subscription : subscriptionId
+MercadoPagoPaymentGateway ..|> PaymentGateway
+PaymentRepositoryImpl ..|> PaymentRepository
+PlanRepositoryImpl ..|> PlanRepository
+SubscriptionRepositoryImpl ..|> SubscriptionRepository
+CheckoutController --> SubscriptionCommandService
+PaymentCheckoutsController --> SubscriptionCommandService
+PaymentNotificationsController --> SubscriptionCommandService
+PlansController --> PlanQueryService
+SubscriptionsController --> SubscriptionQueryService
+SubscriptionsController --> SubscriptionCommandService
+CheckoutResource --> PlanCode
+CheckoutResource --> BillingCycle
+CheckoutResource --> PaymentStatus
+StartPaymentCheckoutResource --> PlanCode
+StartPaymentCheckoutResource --> BillingCycle
+PaymentResourceFromEntityAssembler ..> Payment
+PaymentResourceFromEntityAssembler ..> PaymentResource
+PlanResourceFromEntityAssembler ..> Plan
+PlanResourceFromEntityAssembler ..> PlanResource
+SubscriptionResourceFromEntityAssembler ..> Subscription
+SubscriptionResourceFromEntityAssembler ..> SubscriptionResource
 
-note right of Payment
-  A rejected first checkout can be recorded
-  before a subscription exists.
-end note
 @enduml

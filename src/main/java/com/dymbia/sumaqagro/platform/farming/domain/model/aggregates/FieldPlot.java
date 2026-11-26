@@ -1,6 +1,7 @@
 package com.dymbia.sumaqagro.platform.farming.domain.model.aggregates;
 
 import com.dymbia.sumaqagro.platform.farming.domain.model.commands.RegisterFieldPlotCommand;
+import com.dymbia.sumaqagro.platform.farming.domain.model.events.FieldPlotPolygonLinkedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.events.PlotBoundaryDelineatedEvent;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotBoundary;
 import com.dymbia.sumaqagro.platform.farming.domain.model.valueobjects.PlotStatus;
@@ -122,7 +123,7 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
     }
 
     /**
-     * Links a polygon to the field plot
+     * Links a monitoring polygon to the field plot and records the event.
      *
      * @param polygonId the polygon id
      * @throws IllegalArgumentException if the polygon id is null or blank
@@ -137,6 +138,7 @@ public class FieldPlot extends AbstractDomainAggregateRoot<FieldPlot> {
         }
         this.agroMonitoringPolygonId = polygonId;
         this.status = PlotStatus.ACTIVE_MONITORING;
+        registerDomainEvent(new FieldPlotPolygonLinkedEvent(id, polygonId));
     }
 
     /**

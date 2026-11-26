@@ -110,12 +110,24 @@ public class FieldPlotCommandServiceImpl implements FieldPlotCommandService {
      * {@inheritDoc}
      * <p>
      * A plot without a delineated boundary cannot be linked to a polygon: it is a {@code conflict} (409).
+     * The linkage is saved and its event dispatched within the same transaction.
      * </p>
      */
     @Override
     public Result<Long, ApplicationError> handle(LinkPlotPolygonCommand command) {
-        return changeFieldPlot(command.fieldPlotId(), "link-plot-polygon",
-                fieldPlot -> fieldPlot.linkPolygon(command.polygonId()));
+        var context = "link-plot-polygon";
+        try {
+            return transaction.execute(status -> {
+                var result = changeFieldPlot(command.fieldPlotId(), context,
+                        fieldPlot -> fieldPlot.linkPolygon(command.polygonId()));
+                if (result.isFailure()) {
+                    status.setRollbackOnly();
+                }
+                return result;
+            });
+        } catch (Exception exception) {
+            return Result.failure(ApplicationError.unexpected(context, exception.getMessage()));
+        }
     }
 
     /**

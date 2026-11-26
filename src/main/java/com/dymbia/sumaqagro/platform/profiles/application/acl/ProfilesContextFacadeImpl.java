@@ -150,4 +150,15 @@ public class ProfilesContextFacadeImpl implements ProfilesContextFacade {
                 .map(CooperativeMember::getId)
                 .toList();
     }
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canViewProducerPlot(Long viewerUserId, Long producerUserId, Long plotId) {
+        if (viewerUserId == null || producerUserId == null || plotId == null) return false;
+        var assignment = agronomistAssignmentQueryService.handle(new GetAgronomistAssignedToPlotQuery(plotId));
+        if (assignment.filter(item -> item.isActive() && producerUserId.equals(item.getProducerUserId())
+                && viewerUserId.equals(item.getAgronomistUserId())).isPresent()) return true;
+        return cooperativeQueryService.handle(new GetCooperativeMembersByUserIdQuery(producerUserId)).stream()
+                .filter(CooperativeMember::isActive)
+                .anyMatch(member -> managesCooperative(viewerUserId, member.getCooperativeId()));
+    }
 }

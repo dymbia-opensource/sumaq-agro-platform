@@ -79,4 +79,6 @@ public interface ProfilesContextFacade {
      * @since 1.1
      */
     List<Long> fetchActiveMemberIdsByUserIdAndCooperativeId(Long userId, Long cooperativeId);
+    /** Checks an active advisor assignment or the director's active producer membership. */
+    boolean canViewProducerPlot(Long viewerUserId, Long producerUserId, Long plotId);
 }

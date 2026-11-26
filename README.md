@@ -156,7 +156,12 @@ Registration accepts one role per account: `ROLE_FARMER`, `ROLE_COOPERATIVE_DIRE
 
 ## Documentation
 
-- [Project documentation directory](docs/)
+Refer to the `docs/` folder and project root for detailed specifications:
+- [Architecture Decision Records (ADRs)](docs/adrs.md)
+- [User Stories & API Technical Stories](docs/user-stories.md)
+- [Class Diagrams (PlantUML, one per bounded context)](docs/class-diagrams/)
+- [Software Architecture (Structurizr DSL)](docs/software-architecture.dsl)
+- [Study Guide](docs/study-guide.md) and its [specification](docs/study-guide-spec.md)
 - [Contributing guide](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
 

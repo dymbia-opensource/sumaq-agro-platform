@@ -1,59 +1,1035 @@
 @startuml
-title Profiles — Domain Class Diagram
+' SumaqAgro Platform - Profiles Bounded Context Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
 
-hide empty members
+
+title
+  <b>SumaqAgro Platform - Profiles Bounded Context</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Cooperatives | Technical Team | Agronomist Assignments</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
 skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
 
-class Profile <<aggregate root>> {
-  - id: Long
-  - userId: Long
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
 }
 
-class Cooperative <<aggregate root>> {
-  - id: Long
-  - managerUserId: Long
-  + addMember(command): CooperativeMember
-  + inviteAgronomist(command): AgronomistInvitation
+' Diagram Legend
+
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' Profiles Bounded Context
+
+package "com.dymbia.sumaqagro.platform.profiles" {
+
+  package "interfaces.acl" {
+    interface ProfilesContextFacade <<facade>> {
+      +createProfile(userId: Long, firstName: String, lastName: String): Long
+      +acceptAgronomistInvitations(agronomistUserId: Long, email: String): int
+      +fetchFullNameByUserId(userId: Long): Optional<String>
+      +fetchAgronomistUserIdByPlotId(plotId: Long): Optional<Long>
+      +isMemberOfCooperative(cooperativeId: Long, dni: String): boolean
+      +managesCooperativeMember(directorId: long, cooperativeId: long, memberId: long): boolean
+      +fetchPhoneNumberByUserId(userId: Long): Optional<String>
+      +managesCooperative(userId: Long, cooperativeId: Long): boolean
+      +isActiveMemberOfCooperative(cooperativeId: Long, memberId: Long): boolean
+      +fetchUserIdOfActiveCooperativeMember(cooperativeId: Long, memberId: Long): Long
+      +fetchActiveMemberIdsByUserIdAndCooperativeId(userId: Long, cooperativeId: Long): List<Long>
+    }
+  }
+
+  package "interfaces.rest" {
+    class AgronomistAssignmentsController <<controller>> {
+      -agronomistAssignmentCommandService: AgronomistAssignmentCommandService
+      -agronomistAssignmentQueryService: AgronomistAssignmentQueryService
+      -access: CooperativeAccess
+      +assignAgronomistToPlot(principal: UserDetailsImpl, resource: AssignAgronomistToPlotResource): ResponseEntity<?>
+      +getAssignmentById(assignmentId: Long): ResponseEntity<?>
+      +getAssignments(cooperativeId: Long, producerUserId: Long, agronomistUserId: Long, plotId: Long): ResponseEntity<List<AgronomistAssignmentResource>>
+      +reassignAgronomist(assignmentId: Long, principal: UserDetailsImpl, resource: ReassignAgronomistResource): ResponseEntity<?>
+    }
+
+    class CooperativeAccess <<component>> {
+      -cooperatives: CooperativeQueryService
+      -assignments: AgronomistAssignmentQueryService
+    }
+
+    class CooperativeMembersController <<controller>> {
+      -cooperativeQueryService: CooperativeQueryService
+      +getMembers(cooperativeId: Long, userId: Long): ResponseEntity<?>
+    }
+
+    class CooperativesController <<controller>> {
+      -cooperativeCommandService: CooperativeCommandService
+      -cooperativeQueryService: CooperativeQueryService
+      -profileQueryService: ProfileQueryService
+      -externalIamService: ExternalIamService
+      -access: CooperativeAccess
+      +registerCooperative(principal: UserDetailsImpl, resource: RegisterCooperativeResource): ResponseEntity<?>
+      +getCooperativeById(cooperativeId: Long): ResponseEntity<?>
+      +getCooperatives(directorUserId: Long): ResponseEntity<List<CooperativeResource>>
+      +updateCooperative(cooperativeId: Long, principal: UserDetailsImpl, resource: UpdateCooperativeResource): ResponseEntity<?>
+      +addMember(cooperativeId: Long, principal: UserDetailsImpl, resource: AddCooperativeMemberResource): ResponseEntity<?>
+      +getMembers(cooperativeId: Long): ResponseEntity<?>
+      +findMemberCandidate(cooperativeId: Long, email: String, principal: UserDetailsImpl): ResponseEntity<?>
+      +linkMemberAccount(cooperativeId: Long, memberId: Long, principal: UserDetailsImpl, resource: LinkCooperativeMemberAccountResource): ResponseEntity<?>
+      +getInvitations(cooperativeId: Long, principal: UserDetailsImpl): ResponseEntity<?>
+      +inviteAgronomist(cooperativeId: Long, principal: UserDetailsImpl, resource: InviteAgronomistResource): ResponseEntity<?>
+    }
+
+    class ProfilesController <<controller>> {
+      -profileCommandService: ProfileCommandService
+      -profileQueryService: ProfileQueryService
+      -externalIamService: ExternalIamService
+      +getProfileById(profileId: Long, principal: UserDetailsImpl): ResponseEntity<?>
+      +getProfiles(userId: Long, principal: UserDetailsImpl): ResponseEntity<List<ProfileResource>>
+      +updateProfile(profileId: Long, principal: UserDetailsImpl, resource: UpdateProfileResource): ResponseEntity<?>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class AddCooperativeMemberResource <<record>> {
+      +dni: String
+      +firstName: String
+      +lastName: String
+      +community: String
+      +joinedAt: LocalDate
+      +userId: Long
+      +email: String
+    }
+
+    class AgronomistAssignmentResource <<record>> {
+      +id: Long
+      +cooperativeId: Long
+      +agronomistUserId: Long
+      +plotId: Long
+      +producerUserId: Long
+      +assignedAt: Instant
+      +active: boolean
+      +status: String
+      +history: List<AssignmentHistoryEntryResource>
+    }
+
+    class AgronomistInvitationResource <<record>> {
+      +id: Long
+      +cooperativeId: Long
+      +email: String
+      +status: String
+      +sentAt: Instant
+      +agronomistUserId: Long
+    }
+
+    class AssignAgronomistToPlotResource <<record>> {
+      +cooperativeId: Long
+      +agronomistUserId: Long
+      +plotId: Long
+    }
+
+    class AssignmentHistoryEntryResource <<record>> {
+      +agronomistUserId: Long
+      +assignedAt: Instant
+      +endedAt: Instant
+    }
+
+    class CooperativeMemberResource <<record>> {
+      +id: Long
+      +cooperativeId: Long
+      +dni: String
+      +firstName: String
+      +lastName: String
+      +fullName: String
+      +community: String
+      +joinedAt: LocalDate
+      +active: boolean
+      +userId: Long
+    }
+
+    class CooperativeResource <<record>> {
+      +id: Long
+      +ruc: String
+      +businessName: String
+      +region: String
+      +managerUserId: Long
+      +institutionalEmail: String
+      +legalRepresentative: String
+      +headquartersAddress: String
+      +switchboardPhone: String
+    }
+
+    class InviteAgronomistResource <<record>> {
+      +email: String
+    }
+
+    class LinkCooperativeMemberAccountResource <<record>> {
+      +email: String
+    }
+
+    class MemberCandidateResource <<record>> {
+      +userId: Long
+      +email: String
+      +firstName: String
+      +lastName: String
+      +dni: String
+      +phoneNumber: String
+      +alreadyMember: boolean
+    }
+
+    class ProfileResource <<record>> {
+      +id: Long
+      +userId: Long
+      +firstName: String
+      +lastName: String
+      +fullName: String
+      +email: String
+      +phoneNumber: String
+      +dni: String
+    }
+
+    class ReassignAgronomistResource <<record>> {
+      +agronomistUserId: Long
+    }
+
+    class RegisterCooperativeResource <<record>> {
+      +ruc: String
+      +businessName: String
+      +region: String
+      +managerUserId: Long
+      +institutionalEmail: String
+      +legalRepresentative: String
+      +headquartersAddress: String
+      +switchboardPhone: String
+    }
+
+    class UpdateCooperativeResource <<record>> {
+      +ruc: String
+      +businessName: String
+      +region: String
+      +institutionalEmail: String
+      +legalRepresentative: String
+      +headquartersAddress: String
+      +switchboardPhone: String
+    }
+
+    class UpdateProfileResource <<record>> {
+      +firstName: String
+      +lastName: String
+      +phoneNumber: String
+      +dni: String
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class AddCooperativeMemberCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(cooperativeId: Long, directorUserId: long, resource: AddCooperativeMemberResource): AddCooperativeMemberCommand
+    }
+
+    class AgronomistAssignmentResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: AgronomistAssignment): AgronomistAssignmentResource
+    }
+
+    class AgronomistInvitationResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: AgronomistInvitation): AgronomistInvitationResource
+    }
+
+    class AssignAgronomistToPlotCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: AssignAgronomistToPlotResource): AssignAgronomistToPlotCommand
+    }
+
+    class CooperativeMemberResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: CooperativeMember): CooperativeMemberResource
+    }
+
+    class CooperativeResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: Cooperative): CooperativeResource
+    }
+
+    class InviteAgronomistCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(cooperativeId: Long, directorUserId: long, resource: InviteAgronomistResource): InviteAgronomistCommand
+    }
+
+    class LinkCooperativeMemberAccountCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(cooperativeId: Long, directorUserId: long, memberId: Long, resource: LinkCooperativeMemberAccountResource): LinkCooperativeMemberAccountCommand
+    }
+
+    class ProfileResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: Profile, email: String, owner: boolean): ProfileResource
+    }
+
+    class ReassignAgronomistCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(assignmentId: Long, resource: ReassignAgronomistResource): ReassignAgronomistToPlotCommand
+    }
+
+    class RegisterCooperativeCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: RegisterCooperativeResource): RegisterCooperativeCommand
+    }
+
+    class UpdateCooperativeCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(cooperativeId: Long, resource: UpdateCooperativeResource): UpdateCooperativeCommand
+    }
+
+    class UpdateProfileCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(profileId: Long, resource: UpdateProfileResource): UpdateProfileCommand
+    }
+  }
+
+  package "application.acl" {
+    class ProfilesContextFacadeImpl <<facade>> {
+      -profileCommandService: ProfileCommandService
+      -profileQueryService: ProfileQueryService
+      -cooperativeQueryService: CooperativeQueryService
+      -agronomistAssignmentQueryService: AgronomistAssignmentQueryService
+      -cooperativeCommandService: CooperativeCommandService
+      +managesCooperativeMember(directorId: long, cooperativeId: long, memberId: long): boolean
+      +createProfile(userId: Long, firstName: String, lastName: String): Long
+      +acceptAgronomistInvitations(agronomistUserId: Long, email: String): int
+      +fetchFullNameByUserId(userId: Long): Optional<String>
+      +fetchAgronomistUserIdByPlotId(plotId: Long): Optional<Long>
+      +isMemberOfCooperative(cooperativeId: Long, dni: String): boolean
+      +fetchPhoneNumberByUserId(userId: Long): Optional<String>
+      +managesCooperative(userId: Long, cooperativeId: Long): boolean
+      +isActiveMemberOfCooperative(cooperativeId: Long, memberId: Long): boolean
+      +fetchUserIdOfActiveCooperativeMember(cooperativeId: Long, memberId: Long): Long
+      +fetchActiveMemberIdsByUserIdAndCooperativeId(userId: Long, cooperativeId: Long): List<Long>
+    }
+  }
+
+  package "application.commandservices" {
+    interface AgronomistAssignmentCommandService <<service>> {
+      +handle(command: AssignAgronomistToPlotCommand): Result<AgronomistAssignment, ApplicationError>
+      +handle(command: ReassignAgronomistToPlotCommand): Result<AgronomistAssignment, ApplicationError>
+    }
+
+    interface CooperativeCommandService <<service>> {
+      +handle(command: RegisterCooperativeCommand): Result<Cooperative, ApplicationError>
+      +handle(command: UpdateCooperativeCommand): Result<Cooperative, ApplicationError>
+      +handle(command: AddCooperativeMemberCommand): Result<CooperativeMember, ApplicationError>
+      +handle(command: InviteAgronomistCommand): Result<AgronomistInvitation, ApplicationError>
+      +handle(command: LinkCooperativeMemberAccountCommand): Result<CooperativeMember, ApplicationError>
+      +handle(command: AcceptAgronomistInvitationsCommand): int
+    }
+
+    interface ProfileCommandService <<service>> {
+      +handle(command: CreateProfileCommand): Result<Profile, ApplicationError>
+      +handle(command: UpdateProfileCommand): Result<Profile, ApplicationError>
+    }
+  }
+
+  package "application.internal.commandservices" {
+    class AgronomistAssignmentCommandServiceImpl <<service>> {
+      -agronomistAssignmentRepository: AgronomistAssignmentRepository
+      -cooperativeRepository: CooperativeRepository
+      -externalFarmingService: ExternalFarmingService
+      -externalIamService: ExternalIamService
+      -subscriptions: SubscriptionsContextFacade
+      +handle(command: AssignAgronomistToPlotCommand): Result<AgronomistAssignment, ApplicationError>
+      +handle(command: ReassignAgronomistToPlotCommand): Result<AgronomistAssignment, ApplicationError>
+    }
+
+    class CooperativeCommandServiceImpl <<service>> {
+      -cooperativeRepository: CooperativeRepository
+      -subscriptions: SubscriptionsContextFacade
+      -externalIamService: ExternalIamService
+      +handle(command: RegisterCooperativeCommand): Result<Cooperative, ApplicationError>
+      +handle(command: UpdateCooperativeCommand): Result<Cooperative, ApplicationError>
+      +handle(command: AddCooperativeMemberCommand): Result<CooperativeMember, ApplicationError>
+      +handle(command: InviteAgronomistCommand): Result<AgronomistInvitation, ApplicationError>
+      +handle(command: LinkCooperativeMemberAccountCommand): Result<CooperativeMember, ApplicationError>
+      +handle(command: AcceptAgronomistInvitationsCommand): int
+    }
+
+    class ProfileCommandServiceImpl <<service>> {
+      -profileRepository: ProfileRepository
+      +handle(command: CreateProfileCommand): Result<Profile, ApplicationError>
+      +handle(command: UpdateProfileCommand): Result<Profile, ApplicationError>
+    }
+  }
+
+  package "application.internal.eventhandlers" {
+    class AgronomistInvitedEventHandler <<event handler>> {
+      -emailSender: EmailSender
+      -cooperativeQueryService: CooperativeQueryService
+      -invitationFrontendUrl: URI
+      +on(event: AgronomistInvitedEvent): void
+    }
+  }
+
+  package "application.internal.outboundservices.acl" {
+    class ExternalFarmingService <<acl service>> {
+      -farmingContextFacade: FarmingContextFacade
+      +fetchProducerUserIdByPlotId(plotId: Long): Optional<Long>
+    }
+
+    class ExternalIamService <<acl service>> {
+      -iamContextFacade: IamContextFacade
+      +isAgronomist(userId: Long): boolean
+      +findFarmerUserIdByEmail(email: String): Optional<Long>
+      +findAgronomistUserIdByEmail(email: String): Optional<Long>
+      +isFarmer(userId: Long): boolean
+      +fetchEmailByUserId(userId: Long): Optional<String>
+    }
+  }
+
+  package "application.internal.queryservices" {
+    class AgronomistAssignmentQueryServiceImpl <<service>> {
+      -agronomistAssignmentRepository: AgronomistAssignmentRepository
+      +handle(query: GetAgronomistAssignmentByIdQuery): Optional<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignedToPlotQuery): Optional<AgronomistAssignment>
+      +handle(query: GetAllAgronomistAssignmentsQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByCooperativeQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByProducerUserIdQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByAgronomistUserIdQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByPlotIdQuery): List<AgronomistAssignment>
+    }
+
+    class CooperativeQueryServiceImpl <<service>> {
+      -cooperativeRepository: CooperativeRepository
+      +handle(query: GetCooperativeByIdQuery): Optional<Cooperative>
+      +handle(query: GetCooperativesByManagerUserIdQuery): List<Cooperative>
+      +handle(query: GetAllCooperativesQuery): List<Cooperative>
+      +handle(query: GetCooperativeMembersByCooperativeIdQuery): List<CooperativeMember>
+      +handle(query: GetCooperativeMembersByUserIdQuery): List<CooperativeMember>
+    }
+
+    class ProfileQueryServiceImpl <<service>> {
+      -profileRepository: ProfileRepository
+      +handle(query: GetProfileByIdQuery): Optional<Profile>
+      +handle(query: GetProfileByUserIdQuery): Optional<Profile>
+      +handle(query: GetAllProfilesQuery): List<Profile>
+    }
+  }
+
+  package "application.queryservices" {
+    interface AgronomistAssignmentQueryService <<service>> {
+      +handle(query: GetAgronomistAssignmentByIdQuery): Optional<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignedToPlotQuery): Optional<AgronomistAssignment>
+      +handle(query: GetAllAgronomistAssignmentsQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByCooperativeQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByProducerUserIdQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByAgronomistUserIdQuery): List<AgronomistAssignment>
+      +handle(query: GetAgronomistAssignmentsByPlotIdQuery): List<AgronomistAssignment>
+    }
+
+    interface CooperativeQueryService <<service>> {
+      +handle(query: GetCooperativeByIdQuery): Optional<Cooperative>
+      +handle(query: GetCooperativesByManagerUserIdQuery): List<Cooperative>
+      +handle(query: GetAllCooperativesQuery): List<Cooperative>
+      +handle(query: GetCooperativeMembersByCooperativeIdQuery): List<CooperativeMember>
+      +handle(query: GetCooperativeMembersByUserIdQuery): List<CooperativeMember>
+    }
+
+    interface ProfileQueryService <<service>> {
+      +handle(query: GetProfileByIdQuery): Optional<Profile>
+      +handle(query: GetProfileByUserIdQuery): Optional<Profile>
+      +handle(query: GetAllProfilesQuery): List<Profile>
+    }
+  }
+
+  package "domain.model.aggregates" {
+    class AgronomistAssignment <<aggregate>> {
+      -id: Long
+      -cooperativeId: Long
+      -agronomistUserId: Long
+      -plotId: Long
+      -producerUserId: Long
+      -assignedAt: Instant
+      -active: boolean
+      -history: List<AssignmentHistoryEntry>
+      +{static} reconstitute(id: Long, cooperativeId: Long, agronomistUserId: Long, plotId: Long, producerUserId: Long, assignedAt: Instant, active: boolean, history: List<AssignmentHistoryEntry>): AgronomistAssignment
+      +AgronomistAssignment(command: AssignAgronomistToPlotCommand, producerUserId: Long)
+      +reassignTo(newAgronomistUserId: Long): AgronomistAssignment
+      +deactivate(): void
+      +onAssigned(): void
+    }
+
+    class Cooperative <<aggregate>> {
+      -id: Long
+      -ruc: Ruc
+      -businessName: String
+      -region: String
+      -managerUserId: Long
+      -institutionalEmail: EmailAddress
+      -legalRepresentative: String
+      -headquartersAddress: String
+      -switchboardPhone: PhoneNumber
+      -members: List<CooperativeMember>
+      -invitations: List<AgronomistInvitation>
+      +Cooperative(id: Long, ruc: Ruc, businessName: String, region: String, managerUserId: Long, institutionalEmail: EmailAddress, legalRepresentative: String, headquartersAddress: String, switchboardPhone: PhoneNumber, members: List<CooperativeMember>, invitations: List<AgronomistInvitation>)
+      +{static} reconstitute(id: Long, ruc: Ruc, businessName: String, region: String, managerUserId: Long, institutionalEmail: EmailAddress, legalRepresentative: String, headquartersAddress: String, switchboardPhone: PhoneNumber, members: List<CooperativeMember>, invitations: List<AgronomistInvitation>): Cooperative
+      +Cooperative(command: RegisterCooperativeCommand)
+      +updateInstitutionalData(command: UpdateCooperativeCommand): Cooperative
+      +addMember(command: AddCooperativeMemberCommand): CooperativeMember
+      +linkMemberAccount(memberId: Long, userId: Long): CooperativeMember
+      +inviteAgronomist(command: InviteAgronomistCommand, agronomistUserId: Long): AgronomistInvitation
+      +acceptInvitationsOf(email: String, agronomistUserId: Long): boolean
+      +hasAgronomistInTeam(agronomistUserId: Long): boolean
+      +getTechnicalTeam(): List<AgronomistInvitation>
+      +findMemberByDni(dni: String): Optional<CooperativeMember>
+      +findInvitationByToken(invitationToken: String): Optional<AgronomistInvitation>
+      +hasActiveMemberWithDni(dni: String): boolean
+      +hasActiveMemberWithUserId(userId: Long): boolean
+      +getInstitutionalEmailValue(): EmailAddress
+      +getSwitchboardPhoneValue(): PhoneNumber
+      +onRegistered(): void
+    }
+
+    class Profile <<aggregate>> {
+      -id: Long
+      -userId: Long
+      -name: PersonName
+      -phoneNumber: PhoneNumber
+      -dni: Dni
+      -photoUrl: String
+      -preferredLanguage: PreferredLanguage
+      +Profile(id: Long, userId: Long, name: PersonName, phoneNumber: PhoneNumber, photoUrl: String, preferredLanguage: PreferredLanguage)
+      +{static} reconstitute(id: Long, userId: Long, name: PersonName, phoneNumber: PhoneNumber, photoUrl: String, preferredLanguage: PreferredLanguage, dni: Dni): Profile
+      +Profile(userId: Long, name: PersonName, phoneNumber: PhoneNumber, photoUrl: String, preferredLanguage: PreferredLanguage)
+      +Profile(command: CreateProfileCommand)
+      +update(command: UpdateProfileCommand): void
+      +getFullName(): String
+      +getPhoneNumberValue(): PhoneNumber
+    }
+  }
+
+  package "domain.model.commands" {
+    class AcceptAgronomistInvitationsCommand <<record>> {
+      +agronomistUserId: Long
+      +email: String
+    }
+
+    class AddCooperativeMemberCommand <<record>> {
+      +cooperativeId: Long
+      +directorUserId: long
+      +dni: String
+      +firstName: String
+      +lastName: String
+      +community: String
+      +joinedAt: LocalDate
+      +userId: Long
+      +email: String
+    }
+
+    class AssignAgronomistToPlotCommand <<record>> {
+      +cooperativeId: Long
+      +agronomistUserId: Long
+      +plotId: Long
+    }
+
+    class CreateProfileCommand <<record>> {
+      +userId: Long
+      +firstName: String
+      +lastName: String
+    }
+
+    class InviteAgronomistCommand <<record>> {
+      +cooperativeId: Long
+      +directorUserId: long
+      +email: String
+    }
+
+    class LinkCooperativeMemberAccountCommand <<record>> {
+      +cooperativeId: Long
+      +directorUserId: long
+      +memberId: Long
+      +email: String
+    }
+
+    class ReassignAgronomistToPlotCommand <<record>> {
+      +assignmentId: Long
+      +agronomistUserId: Long
+    }
+
+    class RegisterCooperativeCommand <<record>> {
+      +ruc: String
+      +businessName: String
+      +region: String
+      +managerUserId: Long
+      +institutionalEmail: String
+      +legalRepresentative: String
+      +headquartersAddress: String
+      +switchboardPhone: String
+    }
+
+    class UpdateCooperativeCommand <<record>> {
+      +cooperativeId: Long
+      +ruc: String
+      +businessName: String
+      +region: String
+      +institutionalEmail: String
+      +legalRepresentative: String
+      +headquartersAddress: String
+      +switchboardPhone: String
+    }
+
+    class UpdateProfileCommand <<record>> {
+      +profileId: Long
+      +firstName: String
+      +lastName: String
+      +phoneNumber: String
+      +photoUrl: String
+      +preferredLanguage: PreferredLanguage
+      +dni: String
+    }
+  }
+
+  package "domain.model.entities" {
+    class AgronomistInvitation <<entity>> {
+      -id: Long
+      -cooperativeId: Long
+      -email: EmailAddress
+      -invitationToken: String
+      -status: InvitationStatus
+      -sentAt: Instant
+      -agronomistUserId: Long
+      +AgronomistInvitation(id: Long, cooperativeId: Long, email: EmailAddress, invitationToken: String, status: InvitationStatus, sentAt: Instant)
+      +AgronomistInvitation(id: Long, cooperativeId: Long, email: EmailAddress, invitationToken: String, status: InvitationStatus, sentAt: Instant, agronomistUserId: Long)
+      +{static} reconstitute(id: Long, cooperativeId: Long, email: EmailAddress, invitationToken: String, status: InvitationStatus, sentAt: Instant, agronomistUserId: Long): AgronomistInvitation
+      +getEmailValue(): EmailAddress
+      +isPending(): boolean
+      +isActive(): boolean
+      +accept(agronomistUserId: Long): void
+      +markAsExpired(): void
+    }
+
+    class CooperativeMember <<entity>> {
+      -id: Long
+      -cooperativeId: Long
+      -dni: Dni
+      -name: PersonName
+      -community: String
+      -joinedAt: LocalDate
+      -active: boolean
+      -userId: Long
+      +CooperativeMember(id: Long, cooperativeId: Long, dni: Dni, name: PersonName, community: String, joinedAt: LocalDate, active: boolean, userId: Long)
+      +{static} reconstitute(id: Long, cooperativeId: Long, dni: Dni, name: PersonName, community: String, joinedAt: LocalDate, active: boolean, userId: Long): CooperativeMember
+      +getFullName(): String
+      +deactivate(): void
+      +hasAccount(): boolean
+      +linkAccount(userId: Long): void
+    }
+  }
+
+  package "domain.model.events" {
+    class AgronomistAssignedToPlotEvent <<domain event>> {
+      +assignmentId: Long
+      +cooperativeId: Long
+      +agronomistUserId: Long
+      +plotId: Long
+    }
+
+    class AgronomistInvitedEvent <<domain event>> {
+      +cooperativeId: Long
+      +email: String
+      +invitationToken: String
+      +accountExists: boolean
+    }
+
+    class CooperativeMemberAddedEvent <<domain event>> {
+      +cooperativeId: Long
+      +dni: String
+    }
+
+    class CooperativeRegisteredEvent <<domain event>> {
+      +cooperativeId: Long
+      +ruc: String
+      +managerUserId: Long
+    }
+
+    class ProfileUpdatedEvent <<domain event>> {
+      +profileId: Long
+      +userId: Long
+    }
+  }
+
+  package "domain.model.queries" {
+    class GetAgronomistAssignedToPlotQuery <<record>> {
+      +plotId: Long
+    }
+
+    class GetAgronomistAssignmentByIdQuery <<record>> {
+      +assignmentId: Long
+    }
+
+    class GetAgronomistAssignmentsByAgronomistUserIdQuery <<record>> {
+      +agronomistUserId: Long
+    }
+
+    class GetAgronomistAssignmentsByCooperativeQuery <<record>> {
+      +cooperativeId: Long
+    }
+
+    class GetAgronomistAssignmentsByPlotIdQuery <<record>> {
+      +plotId: Long
+    }
+
+    class GetAgronomistAssignmentsByProducerUserIdQuery <<record>> {
+      +producerUserId: Long
+    }
+
+    class GetAllAgronomistAssignmentsQuery <<record>>
+
+    class GetAllCooperativesQuery <<record>>
+
+    class GetAllProfilesQuery <<record>>
+
+    class GetCooperativeByIdQuery <<record>> {
+      +cooperativeId: Long
+    }
+
+    class GetCooperativeMembersByCooperativeIdQuery <<record>> {
+      +cooperativeId: Long
+    }
+
+    class GetCooperativeMembersByUserIdQuery <<record>> {
+      +userId: Long
+    }
+
+    class GetCooperativesByManagerUserIdQuery <<record>> {
+      +managerUserId: Long
+    }
+
+    class GetProfileByIdQuery <<record>> {
+      +profileId: Long
+    }
+
+    class GetProfileByUserIdQuery <<record>> {
+      +userId: Long
+    }
+  }
+
+  package "domain.model.valueobjects" {
+    class AssignmentHistoryEntry <<value object>> {
+      +agronomistUserId: Long
+      +assignedAt: Instant
+      +endedAt: Instant
+    }
+
+    class Dni <<value object>> {
+      +value: String
+    }
+
+    class EmailAddress <<value object>> {
+      +address: String
+    }
+
+    enum InvitationStatus <<enum>> {
+      PENDING
+      ACCEPTED
+      EXPIRED
+    }
+
+    class PersonName <<value object>> {
+      +firstName: String
+      +lastName: String
+    }
+
+    class PhoneNumber <<value object>> {
+      +value: String
+    }
+
+    enum PreferredLanguage <<enum>> {
+      ES
+      EN
+    }
+
+    class Ruc <<value object>> {
+      +value: String
+    }
+  }
+
+  package "domain.repositories" {
+    interface AgronomistAssignmentRepository <<repository>> {
+      +findById(id: Long): Optional<AgronomistAssignment>
+      +findActiveByPlotId(plotId: Long): Optional<AgronomistAssignment>
+      +findAll(): List<AgronomistAssignment>
+      +findAllByCooperativeId(cooperativeId: Long): List<AgronomistAssignment>
+      +findAllByProducerUserId(producerUserId: Long): List<AgronomistAssignment>
+      +findAllByAgronomistUserId(agronomistUserId: Long): List<AgronomistAssignment>
+      +findAllByPlotId(plotId: Long): List<AgronomistAssignment>
+      +existsActiveByPlotId(plotId: Long): boolean
+      +save(assignment: AgronomistAssignment): AgronomistAssignment
+      +countActiveByAgronomistUserId(agronomistUserId: Long): long
+    }
+
+    interface CooperativeRepository <<repository>> {
+      +findById(id: Long): Optional<Cooperative>
+      +findByRuc(ruc: String): Optional<Cooperative>
+      +findAll(): List<Cooperative>
+      +findAllByManagerUserId(managerUserId: Long): List<Cooperative>
+      +findAllByMemberUserId(userId: Long): List<Cooperative>
+      +findAllWithPendingInvitationFor(email: EmailAddress): List<Cooperative>
+      +existsById(id: Long): boolean
+      +existsByRuc(ruc: String): boolean
+      +existsByRucAndIdIsNot(ruc: String, id: Long): boolean
+      +save(cooperative: Cooperative): Cooperative
+    }
+
+    interface ProfileRepository <<repository>> {
+      +findById(id: Long): Optional<Profile>
+      +findByUserId(userId: Long): Optional<Profile>
+      +findAll(): List<Profile>
+      +existsByUserId(userId: Long): boolean
+      +save(profile: Profile): Profile
+    }
+  }
+
+  package "infrastructure.persistence.jpa.adapters" {
+    class AgronomistAssignmentRepositoryImpl <<adapter>> {
+      -agronomistAssignmentPersistenceRepository: AgronomistAssignmentPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<AgronomistAssignment>
+      +findActiveByPlotId(plotId: Long): Optional<AgronomistAssignment>
+      +findAll(): List<AgronomistAssignment>
+      +findAllByCooperativeId(cooperativeId: Long): List<AgronomistAssignment>
+      +findAllByProducerUserId(producerUserId: Long): List<AgronomistAssignment>
+      +findAllByAgronomistUserId(agronomistUserId: Long): List<AgronomistAssignment>
+      +findAllByPlotId(plotId: Long): List<AgronomistAssignment>
+      +existsActiveByPlotId(plotId: Long): boolean
+      +save(assignment: AgronomistAssignment): AgronomistAssignment
+      +countActiveByAgronomistUserId(agronomistUserId: Long): long
+    }
+
+    class CooperativeRepositoryImpl <<adapter>> {
+      -cooperativePersistenceRepository: CooperativePersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<Cooperative>
+      +findByRuc(ruc: String): Optional<Cooperative>
+      +findAll(): List<Cooperative>
+      +findAllByManagerUserId(managerUserId: Long): List<Cooperative>
+      +findAllByMemberUserId(userId: Long): List<Cooperative>
+      +findAllWithPendingInvitationFor(email: EmailAddress): List<Cooperative>
+      +existsById(id: Long): boolean
+      +existsByRuc(ruc: String): boolean
+      +existsByRucAndIdIsNot(ruc: String, id: Long): boolean
+      +save(cooperative: Cooperative): Cooperative
+    }
+
+    class ProfileRepositoryImpl <<adapter>> {
+      -profilePersistenceRepository: ProfilePersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<Profile>
+      +findByUserId(userId: Long): Optional<Profile>
+      +findAll(): List<Profile>
+      +existsByUserId(userId: Long): boolean
+      +save(profile: Profile): Profile
+    }
+  }
 }
 
-class CooperativeMember <<entity>> {
-  - id: Long
-  - cooperativeId: Long
-  - dni: Dni
-  - name: PersonName
+' Collaborators from other bounded contexts and the Shared Kernel
+
+package "com.dymbia.sumaqagro.platform.farming.interfaces.acl" {
+  interface FarmingContextFacade <<facade>> {
+    +fetchOwnerUserIdByFieldPlotId(fieldPlotId: Long): Long
+  }
 }
 
-class AgronomistInvitation <<entity>> {
-  - id: Long
-  - cooperativeId: Long
+package "com.dymbia.sumaqagro.platform.iam.interfaces.acl" {
+  interface IamContextFacade <<facade>> {
+    +fetchUserIdByEmail(email: String): Long
+    +fetchEmailByUserId(userId: Long): String
+    +userHasRole(userId: Long, roleName: String): boolean
+  }
 }
 
-class AgronomistAssignment <<aggregate root>> {
-  - id: Long
-  - cooperativeId: Long
-  - agronomistUserId: Long
-  - plotId: Long
-  - assignedAt: Instant
-  - active: boolean
-  + deactivate(): void
+package "com.dymbia.sumaqagro.platform.shared.application.outboundservices.email" {
+  interface EmailSender <<port>> {
+    +send(recipient: String, subject: String, htmlContent: String): void
+  }
 }
 
-class PersonName <<value object>>
-class Dni <<value object>>
-class Ruc <<value object>>
-enum InvitationStatus
+package "com.dymbia.sumaqagro.platform.shared.domain.model.aggregates" {
+  abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+    #registerDomainEvent(event: Object): void
+    +domainEvents(): Collection<Object>
+    +clearDomainEvents(): void
+  }
+}
 
-Profile --> PersonName
-Cooperative *-- "1" Ruc
-Cooperative *-- "0..*" CooperativeMember : roster
-Cooperative *-- "0..*" AgronomistInvitation : invitations
-CooperativeMember *-- "1" Dni
-CooperativeMember *-- "1" PersonName
+package "com.dymbia.sumaqagro.platform.shared.infrastructure.events" {
+  class DomainEventPublisher <<component>> {
+    +publishAndClearEvents(aggregate: T): void
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.subscriptions.interfaces.acl" {
+  interface SubscriptionsContextFacade <<facade>> {
+    +lockCooperativeMemberLimit(userId: long): Optional<Integer>
+    +lockAdvisorPlotLimit(userId: long): Optional<Integer>
+  }
+}
+
+' Relationships
+
+' --- Profiles Bounded Context Relationships ---
+ProfilesContextFacadeImpl ..|> ProfilesContextFacade
+ProfilesContextFacadeImpl --> ProfileCommandService
+ProfilesContextFacadeImpl --> ProfileQueryService
+ProfilesContextFacadeImpl --> CooperativeQueryService
+ProfilesContextFacadeImpl --> AgronomistAssignmentQueryService
+ProfilesContextFacadeImpl --> CooperativeCommandService
+AgronomistAssignmentCommandServiceImpl ..|> AgronomistAssignmentCommandService
+AgronomistAssignmentCommandServiceImpl --> AgronomistAssignmentRepository
+AgronomistAssignmentCommandServiceImpl --> CooperativeRepository
+AgronomistAssignmentCommandServiceImpl --> ExternalFarmingService
+AgronomistAssignmentCommandServiceImpl --> ExternalIamService
+CooperativeCommandServiceImpl ..|> CooperativeCommandService
+CooperativeCommandServiceImpl --> CooperativeRepository
+CooperativeCommandServiceImpl --> ExternalIamService
+ProfileCommandServiceImpl ..|> ProfileCommandService
+ProfileCommandServiceImpl --> ProfileRepository
+AgronomistInvitedEventHandler --> EmailSender
+AgronomistInvitedEventHandler --> CooperativeQueryService
+AgronomistInvitedEventHandler ..> AgronomistInvitedEvent : handles
+AgronomistAssignmentQueryServiceImpl ..|> AgronomistAssignmentQueryService
+AgronomistAssignmentQueryServiceImpl --> AgronomistAssignmentRepository
+CooperativeQueryServiceImpl ..|> CooperativeQueryService
+CooperativeQueryServiceImpl --> CooperativeRepository
+ProfileQueryServiceImpl ..|> ProfileQueryService
+ProfileQueryServiceImpl --> ProfileRepository
+AgronomistAssignment --|> AbstractDomainAggregateRoot
+AgronomistAssignment *-- AssignmentHistoryEntry
+AgronomistAssignment ..> AgronomistAssignedToPlotEvent : registers
+Cooperative --|> AbstractDomainAggregateRoot
+Cooperative *-- Ruc
+Cooperative *-- EmailAddress
+Cooperative *-- PhoneNumber
+Cooperative "1" *-- "*" CooperativeMember
+Cooperative "1" *-- "*" AgronomistInvitation
+Cooperative ..> AgronomistInvitedEvent : registers
+Cooperative ..> CooperativeMemberAddedEvent : registers
+Cooperative ..> CooperativeRegisteredEvent : registers
+Profile --|> AbstractDomainAggregateRoot
+Profile *-- PersonName
+Profile *-- PhoneNumber
+Profile *-- Dni
+Profile --> PreferredLanguage
+Profile ..> ProfileUpdatedEvent : registers
+UpdateProfileCommand --> PreferredLanguage
+AgronomistInvitation *-- EmailAddress
 AgronomistInvitation --> InvitationStatus
-AgronomistAssignment ..> Cooperative : cooperativeId
+CooperativeMember *-- Dni
+CooperativeMember *-- PersonName
+AgronomistAssignmentRepositoryImpl ..|> AgronomistAssignmentRepository
+AgronomistAssignmentRepositoryImpl --> DomainEventPublisher
+CooperativeRepositoryImpl ..|> CooperativeRepository
+CooperativeRepositoryImpl --> DomainEventPublisher
+ProfileRepositoryImpl ..|> ProfileRepository
+ProfileRepositoryImpl --> DomainEventPublisher
+AgronomistAssignmentsController --> AgronomistAssignmentCommandService
+AgronomistAssignmentsController --> AgronomistAssignmentQueryService
+AgronomistAssignmentsController --> CooperativeAccess
+CooperativeAccess --> CooperativeQueryService
+CooperativeAccess --> AgronomistAssignmentQueryService
+CooperativeMembersController --> CooperativeQueryService
+CooperativesController --> CooperativeCommandService
+CooperativesController --> CooperativeQueryService
+CooperativesController --> ProfileQueryService
+CooperativesController --> ExternalIamService
+CooperativesController --> CooperativeAccess
+ProfilesController --> ProfileCommandService
+ProfilesController --> ProfileQueryService
+ProfilesController --> ExternalIamService
+AddCooperativeMemberCommandFromResourceAssembler ..> AddCooperativeMemberCommand
+AddCooperativeMemberCommandFromResourceAssembler ..> AddCooperativeMemberResource
+AgronomistAssignmentResourceFromEntityAssembler ..> AgronomistAssignment
+AgronomistAssignmentResourceFromEntityAssembler ..> AgronomistAssignmentResource
+AgronomistInvitationResourceFromEntityAssembler ..> AgronomistInvitation
+AgronomistInvitationResourceFromEntityAssembler ..> AgronomistInvitationResource
+AssignAgronomistToPlotCommandFromResourceAssembler ..> AssignAgronomistToPlotCommand
+AssignAgronomistToPlotCommandFromResourceAssembler ..> AssignAgronomistToPlotResource
+CooperativeMemberResourceFromEntityAssembler ..> CooperativeMember
+CooperativeMemberResourceFromEntityAssembler ..> CooperativeMemberResource
+CooperativeResourceFromEntityAssembler ..> Cooperative
+CooperativeResourceFromEntityAssembler ..> CooperativeResource
+InviteAgronomistCommandFromResourceAssembler ..> InviteAgronomistCommand
+InviteAgronomistCommandFromResourceAssembler ..> InviteAgronomistResource
+LinkCooperativeMemberAccountCommandFromResourceAssembler ..> LinkCooperativeMemberAccountCommand
+LinkCooperativeMemberAccountCommandFromResourceAssembler ..> LinkCooperativeMemberAccountResource
+ProfileResourceFromEntityAssembler ..> Profile
+ProfileResourceFromEntityAssembler ..> ProfileResource
+ReassignAgronomistCommandFromResourceAssembler ..> ReassignAgronomistResource
+ReassignAgronomistCommandFromResourceAssembler ..> ReassignAgronomistToPlotCommand
+RegisterCooperativeCommandFromResourceAssembler ..> RegisterCooperativeCommand
+RegisterCooperativeCommandFromResourceAssembler ..> RegisterCooperativeResource
+UpdateCooperativeCommandFromResourceAssembler ..> UpdateCooperativeCommand
+UpdateCooperativeCommandFromResourceAssembler ..> UpdateCooperativeResource
+UpdateProfileCommandFromResourceAssembler ..> UpdateProfileCommand
+UpdateProfileCommandFromResourceAssembler ..> UpdateProfileResource
 
-note right of AgronomistAssignment
-  agronomistUserId references IAM.
-  plotId references Farming.
-end note
+' --- Cross-Context Invocations ---
+AgronomistAssignmentCommandServiceImpl ..> SubscriptionsContextFacade : cross-context sync (ACL)
+CooperativeCommandServiceImpl ..> SubscriptionsContextFacade : cross-context sync (ACL)
+ExternalFarmingService ..> FarmingContextFacade : cross-context sync (ACL)
+ExternalIamService ..> IamContextFacade : cross-context sync (ACL)
+
 @enduml

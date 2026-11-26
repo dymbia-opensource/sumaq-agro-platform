@@ -1,26 +1,558 @@
 @startuml
-title IAM — Domain Class Diagram
+' SumaqAgro Platform - IAM (Identity and Access Management) Bounded Context Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
 
-hide empty members
+
+title
+  <b>SumaqAgro Platform - IAM (Identity and Access Management) Bounded Context</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Spring Security | JWT | BCrypt | Brevo</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
 skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
 
-class User <<aggregate root>> {
-  - id: Long
-  - email: EmailAddress
-  - passwordHash: String
-  - roles: Set<Role>
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
 }
 
-class Role <<entity>>
-class EmailAddress <<value object>>
+' Diagram Legend
 
-enum Roles {
-  ROLE_FARMER
-  ROLE_COOPERATIVE_DIRECTOR
-  ROLE_AGRONOMIST
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' IAM (Identity and Access Management) Bounded Context
+
+package "com.dymbia.sumaqagro.platform.iam" {
+
+  package "interfaces.acl" {
+    class IamContextFacade <<facade>> {
+      -userRepository: UserRepository
+      +fetchUserIdByEmail(email: String): Long
+      +fetchEmailByUserId(userId: Long): String
+      +userHasRole(userId: Long, roleName: String): boolean
+    }
+  }
+
+  package "interfaces.rest" {
+    class PasswordRecoveryController <<controller>> {
+      -recovery: PasswordRecoveryCommandService
+      +requestReset(resource: RequestPasswordResetResource): ResponseEntity<Void>
+      +resetPassword(resource: ResetPasswordResource): ResponseEntity<?>
+    }
+
+    class TokensController <<controller>> {
+      -userCommandService: UserCommandService
+      -profilesContextFacade: ProfilesContextFacade
+      +generateToken(signInResource: SignInResource): ResponseEntity<?>
+    }
+
+    class UsersController <<controller>> {
+      -userCommandService: UserCommandService
+      +createUser(signUpResource: SignUpResource): ResponseEntity<?>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class AuthenticatedUserResource <<record>> {
+      +id: Long
+      +email: String
+      +roles: List<String>
+      +token: String
+      +fullName: String
+    }
+
+    class RequestPasswordResetResource <<record>> {
+      +email: String
+    }
+
+    class ResetPasswordResource <<record>> {
+      +token: String
+      +newPassword: String
+    }
+
+    class SignInResource <<record>> {
+      +email: String
+      +password: String
+    }
+
+    class SignUpResource <<record>> {
+      +email: String
+      +password: String
+      +roles: List<String>
+      +profile: ProfileResource
+    }
+
+    class UserResource <<record>> {
+      +id: Long
+      +email: String
+      +roles: List<String>
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class AuthenticatedUserResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(user: User, token: String, fullName: String): AuthenticatedUserResource
+    }
+
+    class SignInCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: SignInResource): SignInCommand
+    }
+
+    class SignUpCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: SignUpResource): SignUpCommand
+    }
+
+    class UserResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(user: User): UserResource
+    }
+  }
+
+  package "application.commandservices" {
+    interface PasswordRecoveryCommandService <<service>> {
+      +handle(command: RequestPasswordResetCommand): void
+      +handle(command: ResetPasswordCommand): Result<Long, ApplicationError>
+    }
+
+    interface RoleCommandService <<service>> {
+      +handle(command: SeedRolesCommand): void
+    }
+
+    interface UserCommandService <<service>> {
+      +handle(command: SignUpCommand): Result<User, ApplicationError>
+      +handle(command: SignInCommand): Result<ImmutablePair<User, String>, ApplicationError>
+    }
+  }
+
+  package "application.internal.commandservices" {
+    class PasswordRecoveryCommandServiceImpl <<service>> {
+      -requests: PasswordResetRequestService
+      -resets: PasswordResetService
+      -senders: ObjectProvider<PasswordResetEmailSender>
+      -frontendUrl: URI
+      +handle(command: RequestPasswordResetCommand): void
+      +handle(command: ResetPasswordCommand): Result<Long, ApplicationError>
+    }
+
+    class PasswordResetRequestService <<service>> {
+      -users: UserRepository
+      -tokens: PasswordResetTokenRepository
+      -tokenCodec: PasswordResetTokenCodec
+      +handle(command: RequestPasswordResetCommand): Optional<String>
+    }
+
+    class PasswordResetService <<service>> {
+      -users: UserRepository
+      -tokens: PasswordResetTokenRepository
+      -tokenCodec: PasswordResetTokenCodec
+      -hashingService: HashingService
+      +handle(command: ResetPasswordCommand): Result<Long, ApplicationError>
+    }
+
+    class RoleCommandServiceImpl <<service>> {
+      -roleRepository: RoleRepository
+      +handle(command: SeedRolesCommand): void
+    }
+
+    class UserCommandServiceImpl <<service>> {
+      -profilesContextFacade: ProfilesContextFacade
+      -userRepository: UserRepository
+      -hashingService: HashingService
+      -tokenService: TokenService
+      -roleRepository: RoleRepository
+      +handle(command: SignInCommand): Result<ImmutablePair<User, String>, ApplicationError>
+      +handle(command: SignUpCommand): Result<User, ApplicationError>
+    }
+  }
+
+  package "application.internal.eventhandlers" {
+    class ApplicationReadyEventHandler <<event handler>> {
+      -roleCommandService: RoleCommandService
+      +seedRoles(): void
+    }
+  }
+
+  package "application.internal.outboundservices.email" {
+    interface PasswordResetEmailSender <<port>> {
+      +send(recipient: EmailAddress, resetLink: URI): void
+    }
+  }
+
+  package "application.internal.outboundservices.hashing" {
+    interface HashingService <<port>> {
+      +encode(rawPassword: CharSequence): String
+      +matches(rawPassword: CharSequence, encodedPassword: String): boolean
+    }
+  }
+
+  package "application.internal.outboundservices.tokens" {
+    interface PasswordResetTokenCodec <<port>> {
+      +generate(): String
+      +hash(token: String): String
+    }
+
+    interface TokenService <<port>> {
+      +generateToken(email: String): String
+      +getEmailFromToken(token: String): String
+      +validateToken(token: String): boolean
+    }
+  }
+
+  package "domain.model.aggregates" {
+    class User <<aggregate>> {
+      -id: Long
+      -email: EmailAddress
+      -passwordHash: String
+      -roles: Set<Role>
+      +changePasswordHash(newPasswordHash: String): void
+      +User(email: EmailAddress, passwordHash: String, role: Role)
+      +{static} reconstitute(id: long, email: EmailAddress, passwordHash: String, roles: Set<Role>): User
+    }
+  }
+
+  package "domain.model.commands" {
+    class RequestPasswordResetCommand <<record>> {
+      +email: EmailAddress
+    }
+
+    class ResetPasswordCommand <<record>> {
+      +token: String
+      +newPassword: String
+    }
+
+    class SeedRolesCommand <<record>>
+
+    class SignInCommand <<record>> {
+      +email: EmailAddress
+      +password: String
+    }
+
+    class SignUpCommand <<record>> {
+      +email: EmailAddress
+      +password: String
+      +requestedRole: Roles
+      +firstName: String
+      +lastName: String
+    }
+  }
+
+  package "domain.model.entities" {
+    class PasswordResetToken <<entity>> {
+      -userId: long
+      -tokenHash: String
+      -expiresAt: Instant
+      -consumedAt: Instant
+      +PasswordResetToken(userId: long, tokenHash: String, expiresAt: Instant)
+      +canBeUsedAt(now: Instant): boolean
+      +consume(now: Instant): void
+      +{static} reconstitute(userId: long, tokenHash: String, expiresAt: Instant, consumedAt: Instant): PasswordResetToken
+    }
+
+    class Role <<entity>> {
+      -id: Long
+      -name: Roles
+      +Role(name: Roles)
+      +Role(id: Long, name: Roles)
+      +getStringName(): String
+    }
+  }
+
+  package "domain.model.valueobjects" {
+    class EmailAddress <<value object>> {
+      +value: String
+    }
+
+    enum Roles <<enum>> {
+      ROLE_FARMER
+      ROLE_COOPERATIVE_DIRECTOR
+      ROLE_AGRONOMIST
+    }
+  }
+
+  package "domain.repositories" {
+    interface PasswordResetTokenRepository <<repository>> {
+      +insert(token: PasswordResetToken): void
+      +findByTokenHash(tokenHash: String): Optional<PasswordResetToken>
+      +consumeIfUsable(tokenHash: String, consumedAt: Instant): boolean
+    }
+
+    interface RoleRepository <<repository>> {
+      +findByName(name: Roles): Optional<Role>
+      +existsByName(name: Roles): boolean
+      +findAll(): List<Role>
+      +save(role: Role): Role
+    }
+
+    interface UserRepository <<repository>> {
+      +findById(id: Long): Optional<User>
+      +findByEmail(email: EmailAddress): Optional<User>
+      +findAll(): List<User>
+      +existsByEmail(email: EmailAddress): boolean
+      +save(user: User): User
+    }
+  }
+
+  package "infrastructure.authorization.sfs.configuration" {
+    class WebSecurityConfiguration <<configuration>> {
+      +filterChain(http: HttpSecurity, tokenService: BearerTokenService, userDetailsService: UserDetailsService, allowedOrigin: String): SecurityFilterChain
+    }
+  }
+
+  package "infrastructure.authorization.sfs.model" {
+    class UserDetailsImpl <<adapter>> {
+      -id: Long
+      -username: String
+      -password: String
+      -accountNonExpired: boolean
+      -accountNonLocked: boolean
+      -credentialsNonExpired: boolean
+      -enabled: boolean
+      -authorities: Collection<? extends GrantedAuthority>
+      +{static} build(user: User): UserDetailsImpl
+      +eraseCredentials(): void
+    }
+
+    class UsernamePasswordAuthenticationTokenBuilder <<adapter>> {
+      +{static} build(principal: UserDetails, request: HttpServletRequest): UsernamePasswordAuthenticationToken
+    }
+  }
+
+  package "infrastructure.authorization.sfs.pipeline" {
+    class BearerAuthorizationRequestFilter <<adapter>> {
+      -tokenService: BearerTokenService
+      -userDetailsService: UserDetailsService
+      #doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain): void
+    }
+  }
+
+  package "infrastructure.authorization.sfs.services" {
+    class UserDetailsServiceImpl <<adapter>> {
+      -userRepository: UserRepository
+      +loadUserByUsername(username: String): UserDetailsImpl
+    }
+  }
+
+  package "infrastructure.email.brevo" {
+    class BrevoPasswordResetEmailSender <<adapter>> {
+      -client: RestClient
+      -senderEmail: String
+    }
+  }
+
+  package "infrastructure.hashing.bcrypt" {
+    interface BCryptHashingService <<adapter>>
+  }
+
+  package "infrastructure.hashing.bcrypt.services" {
+    class HashingServiceImpl <<adapter>> {
+      -passwordEncoder: BCryptPasswordEncoder
+      +encode(rawPassword: CharSequence): String
+      +matches(rawPassword: CharSequence, encodedPassword: String): boolean
+    }
+  }
+
+  package "infrastructure.persistence.jpa.adapters" {
+    class PasswordResetTokenRepositoryImpl <<adapter>> {
+      -persistenceRepository: PasswordResetTokenPersistenceRepository
+      +consumeIfUsable(tokenHash: String, consumedAt: Instant): boolean
+      +insert(token: PasswordResetToken): void
+      +findByTokenHash(tokenHash: String): Optional<PasswordResetToken>
+    }
+
+    class RoleRepositoryImpl <<adapter>> {
+      -rolePersistenceRepository: RolePersistenceRepository
+      +findByName(name: Roles): Optional<Role>
+      +findAll(): List<Role>
+      +save(role: Role): Role
+      +existsByName(name: Roles): boolean
+    }
+
+    class UserRepositoryImpl <<adapter>> {
+      -userPersistenceRepository: UserPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findById(id: Long): Optional<User>
+      +findByEmail(email: EmailAddress): Optional<User>
+      +findAll(): List<User>
+      +save(user: User): User
+      +existsByEmail(email: EmailAddress): boolean
+    }
+  }
+
+  package "infrastructure.tokens.jwt" {
+    interface BearerTokenService <<adapter>> {
+      +getBearerTokenFrom(request: HttpServletRequest): String
+    }
+  }
+
+  package "infrastructure.tokens.jwt.services" {
+    class TokenServiceImpl <<adapter>> {
+      -secret: String
+      -expirationMinutes: long
+      +getBearerTokenFrom(request: HttpServletRequest): String
+      +generateToken(email: String): String
+      +getEmailFromToken(token: String): String
+      +validateToken(token: String): boolean
+    }
+  }
+
+  package "infrastructure.tokens.recovery" {
+    class SecurePasswordResetTokenCodec <<adapter>> {
+      -random: SecureRandom
+      +generate(): String
+      +hash(token: String): String
+    }
+  }
 }
 
-User *-- "1" EmailAddress
-User --> "1..*" Role : assigned roles
-Role --> Roles : name
+' Collaborators from other bounded contexts and the Shared Kernel
+
+package "com.dymbia.sumaqagro.platform.profiles.interfaces.acl" {
+  interface ProfilesContextFacade <<facade>> {
+    +createProfile(userId: Long, firstName: String, lastName: String): Long
+    +acceptAgronomistInvitations(agronomistUserId: Long, email: String): int
+    +fetchFullNameByUserId(userId: Long): Optional<String>
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.shared.domain.model.aggregates" {
+  abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+    #registerDomainEvent(event: Object): void
+    +domainEvents(): Collection<Object>
+    +clearDomainEvents(): void
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.shared.infrastructure.events" {
+  class DomainEventPublisher <<component>> {
+    +publishAndClearEvents(aggregate: T): void
+  }
+}
+
+' Relationships
+
+' --- IAM (Identity and Access Management) Bounded Context Relationships ---
+PasswordRecoveryCommandServiceImpl ..|> PasswordRecoveryCommandService
+PasswordRecoveryCommandServiceImpl --> PasswordResetRequestService
+PasswordRecoveryCommandServiceImpl --> PasswordResetService
+PasswordRecoveryCommandServiceImpl --> PasswordResetEmailSender
+PasswordResetRequestService --> UserRepository
+PasswordResetRequestService --> PasswordResetTokenRepository
+PasswordResetRequestService --> PasswordResetTokenCodec
+PasswordResetService --> UserRepository
+PasswordResetService --> PasswordResetTokenRepository
+PasswordResetService --> PasswordResetTokenCodec
+PasswordResetService --> HashingService
+RoleCommandServiceImpl ..|> RoleCommandService
+RoleCommandServiceImpl --> RoleRepository
+UserCommandServiceImpl ..|> UserCommandService
+UserCommandServiceImpl --> UserRepository
+UserCommandServiceImpl --> HashingService
+UserCommandServiceImpl --> TokenService
+UserCommandServiceImpl --> RoleRepository
+ApplicationReadyEventHandler --> RoleCommandService
+User --|> AbstractDomainAggregateRoot
+User *-- EmailAddress
+User "1" *-- "*" Role
+RequestPasswordResetCommand --> EmailAddress
+SignInCommand --> EmailAddress
+SignUpCommand --> EmailAddress
+SignUpCommand --> Roles
+Role --> Roles
+WebSecurityConfiguration ..> BearerTokenService
+BearerAuthorizationRequestFilter --> BearerTokenService
+UserDetailsServiceImpl --> UserRepository
+BrevoPasswordResetEmailSender ..|> PasswordResetEmailSender
+BCryptHashingService --|> HashingService
+HashingServiceImpl ..|> BCryptHashingService
+PasswordResetTokenRepositoryImpl ..|> PasswordResetTokenRepository
+RoleRepositoryImpl ..|> RoleRepository
+UserRepositoryImpl ..|> UserRepository
+UserRepositoryImpl --> DomainEventPublisher
+BearerTokenService --|> TokenService
+TokenServiceImpl ..|> BearerTokenService
+SecurePasswordResetTokenCodec ..|> PasswordResetTokenCodec
+IamContextFacade --> UserRepository
+PasswordRecoveryController --> PasswordRecoveryCommandService
+TokensController --> UserCommandService
+UsersController --> UserCommandService
+AuthenticatedUserResourceFromEntityAssembler ..> AuthenticatedUserResource
+AuthenticatedUserResourceFromEntityAssembler ..> User
+SignInCommandFromResourceAssembler ..> SignInCommand
+SignInCommandFromResourceAssembler ..> SignInResource
+SignUpCommandFromResourceAssembler ..> SignUpCommand
+SignUpCommandFromResourceAssembler ..> SignUpResource
+UserResourceFromEntityAssembler ..> User
+UserResourceFromEntityAssembler ..> UserResource
+
+' --- Cross-Context Invocations ---
+UserCommandServiceImpl ..> ProfilesContextFacade : cross-context sync (ACL)
+TokensController ..> ProfilesContextFacade : cross-context sync (ACL)
+
 @enduml

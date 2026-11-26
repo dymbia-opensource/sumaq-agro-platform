@@ -1,60 +1,1193 @@
 @startuml
-title Crop Health — Domain Model
+' SumaqAgro Platform - Crop Health (Crop) Bounded Context Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
+
+
+title
+  <b>SumaqAgro Platform - Crop Health (Crop) Bounded Context</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Satellite Observations | Climate Forecasts | Alerts | Advisory</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
 skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
 
-class SatelliteObservation <<Aggregate Root>> {
-  - id: Long
-  - plotId: Long
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
 }
 
-class ClimateForecast <<Aggregate Root>> {
-  - id: Long
+' Diagram Legend
+
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' Crop Health (Crop) Bounded Context
+
+package "com.dymbia.sumaqagro.platform.crop" {
+
+  package "interfaces.rest" {
+    class AgroclimaticAlertsController <<controller>> {
+      -queryService: AgroclimaticAlertQueryService
+      +getAgroclimaticAlertsByRegion(region: String): ResponseEntity<List<AgroclimaticAlertResource>>
+    }
+
+    class ClimateForecastsController <<controller>> {
+      -queryService: ClimateForecastQueryService
+      -commandService: ClimateForecastCommandService
+      +getClimateForecastsByRegion(region: String): ResponseEntity<List<ClimateForecastResource>>
+      +importClimateForecast(resource: ImportClimateForecastResource, authenticatedUserId: Long): ResponseEntity<?>
+    }
+
+    class FieldInspectionsController <<controller>> {
+      -commandService: FieldInspectionCommandService
+      -queryService: FieldInspectionQueryService
+      +scheduleFieldInspection(resource: ScheduleFieldInspectionResource): ResponseEntity<?>
+      +getFieldInspectionById(fieldInspectionId: Long): ResponseEntity<FieldInspectionResource>
+      +getAllFieldInspectionsByPlotId(plotId: Long): ResponseEntity<List<FieldInspectionResource>>
+      +completeFieldInspection(fieldInspectionId: Long, resource: CompleteFieldInspectionResource): ResponseEntity<?>
+    }
+
+    class PestReportsController <<controller>> {
+      -commandService: PestReportCommandService
+      -queryService: PestReportQueryService
+      +recordPestReport(resource: RecordPestReportResource): ResponseEntity<?>
+      +getPestReportById(pestReportId: Long): ResponseEntity<PestReportResource>
+      +getAllPestReportsByPlotId(plotId: Long): ResponseEntity<List<PestReportResource>>
+      +deletePestReport(pestReportId: Long): ResponseEntity<?>
+    }
+
+    class RegionalBulletinsController <<controller>> {
+      -commandService: RegionalBulletinCommandService
+      -queryService: RegionalBulletinQueryService
+      +publishRegionalBulletin(resource: PublishRegionalBulletinResource): ResponseEntity<?>
+      +getRegionalBulletinsByRegion(region: String): ResponseEntity<List<RegionalBulletinResource>>
+    }
+
+    class SatelliteObservationsController <<controller>> {
+      -queryService: SatelliteObservationQueryService
+      -commandService: SatelliteObservationCommandService
+      +importSatelliteObservation(resource: ImportSatelliteObservationResource, authenticatedUserId: Long): ResponseEntity<?>
+      +getSatelliteObservationsByPlotId(plotId: Long): ResponseEntity<List<SatelliteObservationResource>>
+    }
+
+    class TechnicalPrescriptionsController <<controller>> {
+      -commandService: TechnicalPrescriptionCommandService
+      -queryService: TechnicalPrescriptionQueryService
+      +issueTechnicalPrescription(resource: IssueTechnicalPrescriptionResource): ResponseEntity<?>
+      +getTechnicalPrescriptionById(technicalPrescriptionId: Long): ResponseEntity<TechnicalPrescriptionResource>
+      +getTechnicalPrescriptionsByPlotId(plotId: Long): ResponseEntity<List<TechnicalPrescriptionResource>>
+      +registerTechnicalPrescriptionApplication(technicalPrescriptionId: Long): ResponseEntity<?>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class AgroclimaticAlertResource <<record>> {
+      +id: Long
+      +title: String
+      +description: String
+      +severity: AgroclimaticAlertSeverity
+      +region: String
+      +issuedAt: Instant
+      +source: String
+    }
+
+    class ClimateForecastResource <<record>> {
+      +id: Long
+      +region: String
+      +temperatureCelsius: double
+      +rainChance: double
+      +forecastDate: Instant
+      +source: String
+    }
+
+    class CompleteFieldInspectionResource <<record>> {
+      +findings: String
+    }
+
+    class FieldInspectionResource <<record>> {
+      +id: Long
+      +pestReportId: Long
+      +plotId: Long
+      +agronomistId: Long
+      +scheduledAt: Instant
+      +status: FieldInspectionStatus
+      +findings: String
+      +completedAt: Instant
+    }
+
+    class ImportClimateForecastResource <<record>> {
+      +plotId: Long
+    }
+
+    class ImportSatelliteObservationResource <<record>> {
+      +plotId: Long
+      +start: Instant
+      +end: Instant
+    }
+
+    class IssueTechnicalPrescriptionResource <<record>> {
+      +pestReportId: Long
+      +agronomistId: Long
+      +product: String
+      +dosage: String
+      +instructions: String
+      +applicationDate: LocalDate
+    }
+
+    class PestReportResource <<record>> {
+      +id: Long
+      +plotId: Long
+      +reporterId: Long
+      +description: String
+      +severity: PestReportSeverity
+      +status: PestReportStatus
+    }
+
+    class PublishRegionalBulletinResource <<record>> {
+      +agronomistId: Long
+      +region: String
+      +title: String
+      +content: String
+    }
+
+    class RecordPestReportResource <<record>> {
+      +plotId: Long
+      +reporterId: Long
+      +description: String
+      +severity: PestReportSeverity
+    }
+
+    class RegionalBulletinResource <<record>> {
+      +id: Long
+      +agronomistId: Long
+      +region: String
+      +title: String
+      +content: String
+      +publishedAt: Instant
+    }
+
+    class RegisterTechnicalPrescriptionApplicationResource <<record>> {
+      +technicalPrescriptionId: Long
+    }
+
+    class SatelliteObservationResource <<record>> {
+      +id: Long
+      +plotId: Long
+      +capturedAt: Instant
+      +source: String
+      +ndviMean: Double
+      +ndwiMean: Double
+      +cloudCoveragePercent: Double
+      +surfaceTempKelvin: Double
+    }
+
+    class ScheduleFieldInspectionResource <<record>> {
+      +pestReportId: Long
+      +agronomistId: Long
+      +scheduledAt: Instant
+    }
+
+    class TechnicalPrescriptionResource <<record>> {
+      +id: Long
+      +pestReportId: Long
+      +plotId: Long
+      +agronomistId: Long
+      +product: String
+      +dosage: String
+      +instructions: String
+      +applicationDate: LocalDate
+      +status: TechnicalPrescriptionStatus
+      +appliedAt: Instant
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class AgroclimaticAlertResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(alert: AgroclimaticAlert): AgroclimaticAlertResource
+    }
+
+    class ClimateForecastResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(forecast: ClimateForecast): ClimateForecastResource
+    }
+
+    class CompleteFieldInspectionCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(fieldInspectionId: Long, resource: CompleteFieldInspectionResource): CompleteFieldInspectionCommand
+    }
+
+    class FieldInspectionResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: FieldInspection): FieldInspectionResource
+    }
+
+    class ImportSatelliteObservationCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: ImportSatelliteObservationResource, authenticatedUserId: Long): ImportSatelliteObservationCommand
+    }
+
+    class IssueTechnicalPrescriptionCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: IssueTechnicalPrescriptionResource): IssueTechnicalPrescriptionCommand
+    }
+
+    class PestReportResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: PestReport): PestReportResource
+    }
+
+    class PublishRegionalBulletinCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: PublishRegionalBulletinResource): PublishRegionalBulletinCommand
+    }
+
+    class RecordPestReportCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: RecordPestReportResource): RecordPestReportCommand
+    }
+
+    class RegionalBulletinResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(bulletin: RegionalBulletin): RegionalBulletinResource
+    }
+
+    class RegisterTechnicalPrescriptionApplicationCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: RegisterTechnicalPrescriptionApplicationResource): RegisterTechnicalPrescriptionApplicationCommand
+    }
+
+    class SatelliteObservationResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(observation: SatelliteObservation): SatelliteObservationResource
+    }
+
+    class ScheduleFieldInspectionCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: ScheduleFieldInspectionResource): ScheduleFieldInspectionCommand
+    }
+
+    class TechnicalPrescriptionResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(prescription: TechnicalPrescription): TechnicalPrescriptionResource
+    }
+  }
+
+  package "application.commandservices" {
+    interface AgroclimaticAlertCommandService <<service>> {
+      +handle(command: IssueAgroclimaticAlertCommand): Result<Long, ApplicationError>
+    }
+
+    interface ClimateForecastCommandService <<service>> {
+      +handle(command: RecordClimateForecastCommand): Result<Long, ApplicationError>
+      +handle(command: ImportClimateForecastCommand): Result<List<ClimateForecast>, ApplicationError>
+    }
+
+    interface FieldInspectionCommandService <<service>> {
+      +handle(command: ScheduleFieldInspectionCommand): Result<Long, ApplicationError>
+      +handle(command: CompleteFieldInspectionCommand): Result<Long, ApplicationError>
+    }
+
+    interface PestReportCommandService <<service>> {
+      +handle(command: RecordPestReportCommand): Result<Long, ApplicationError>
+      +handle(command: ResolvePestReportCommand): Result<Long, ApplicationError>
+      +handle(command: DeletePestReportCommand): Result<Long, ApplicationError>
+      +handle(command: MarkPestReportAsInspectedCommand): Result<Long, ApplicationError>
+    }
+
+    interface RegionalBulletinCommandService <<service>> {
+      +handle(command: PublishRegionalBulletinCommand): Result<RegionalBulletin, ApplicationError>
+    }
+
+    interface SatelliteObservationCommandService <<service>> {
+      +handle(command: RecordSatelliteObservationCommand): Result<Long, ApplicationError>
+      +handle(command: ImportSatelliteObservationCommand): Result<SatelliteObservation, ApplicationError>
+    }
+
+    interface TechnicalPrescriptionCommandService <<service>> {
+      +handle(command: IssueTechnicalPrescriptionCommand): Result<Long, ApplicationError>
+      +handle(command: RegisterTechnicalPrescriptionApplicationCommand): Result<Long, ApplicationError>
+    }
+  }
+
+  package "application.internal.commandservices" {
+    class AgroclimaticAlertCommandServiceImpl <<service>> {
+      -alertRepository: AgroclimaticAlertRepository
+      +handle(command: IssueAgroclimaticAlertCommand): Result<Long, ApplicationError>
+    }
+
+    class ClimateForecastCommandServiceImpl <<service>> {
+      -forecastRepository: ClimateForecastRepository
+      -alertCommandService: AgroclimaticAlertCommandService
+      -externalFarmingService: ExternalFarmingService
+      -weatherForecasting: WeatherForecasting
+      -clock: Clock
+      +handle(command: RecordClimateForecastCommand): Result<Long, ApplicationError>
+      +handle(command: ImportClimateForecastCommand): Result<List<ClimateForecast>, ApplicationError>
+    }
+
+    class FieldInspectionCommandServiceImpl <<service>> {
+      -inspectionRepository: FieldInspectionRepository
+      -pestReportRepository: PestReportRepository
+      +handle(command: ScheduleFieldInspectionCommand): Result<Long, ApplicationError>
+      +handle(command: CompleteFieldInspectionCommand): Result<Long, ApplicationError>
+    }
+
+    class PestReportCommandServiceImpl <<service>> {
+      -pestReportRepository: PestReportRepository
+      +handle(command: RecordPestReportCommand): Result<Long, ApplicationError>
+      +handle(command: MarkPestReportAsInspectedCommand): Result<Long, ApplicationError>
+      +handle(command: ResolvePestReportCommand): Result<Long, ApplicationError>
+      +handle(command: DeletePestReportCommand): Result<Long, ApplicationError>
+    }
+
+    class RegionalBulletinCommandServiceImpl <<service>> {
+      -bulletinRepository: RegionalBulletinRepository
+      +handle(command: PublishRegionalBulletinCommand): Result<RegionalBulletin, ApplicationError>
+    }
+
+    class SatelliteObservationCommandServiceImpl <<service>> {
+      -observationRepository: SatelliteObservationRepository
+      -externalFarmingService: ExternalFarmingService
+      -imagery: SatelliteImagery
+      +handle(command: RecordSatelliteObservationCommand): Result<Long, ApplicationError>
+      +handle(command: ImportSatelliteObservationCommand): Result<SatelliteObservation, ApplicationError>
+    }
+
+    class TechnicalPrescriptionCommandServiceImpl <<service>> {
+      -prescriptionRepository: TechnicalPrescriptionRepository
+      -pestReportRepository: PestReportRepository
+      +handle(command: IssueTechnicalPrescriptionCommand): Result<Long, ApplicationError>
+      +handle(command: RegisterTechnicalPrescriptionApplicationCommand): Result<Long, ApplicationError>
+    }
+  }
+
+  package "application.internal.eventhandlers" {
+    class AgroclimaticAlertIssuedEventHandler <<event handler>> {
+      -externalFarmingService: ExternalFarmingService
+      -externalIamService: ExternalIamService
+      -emailSender: EmailSender
+      +on(event: AgroclimaticAlertIssuedEvent): void
+    }
+
+    class ClimateForecastRecordedEventHandler <<event handler>> {
+      +on(event: ClimateForecastRecordedEvent): void
+    }
+
+    class FieldInspectionCompletedEventHandler <<event handler>> {
+      -pestReportCommandService: PestReportCommandService
+      +on(event: FieldInspectionCompletedEvent): void
+    }
+
+    class PestReportRecordedEventHandler <<event handler>> {
+      +on(event: PestReportRecordedEvent): void
+    }
+
+    class SatelliteObservationRecordedEventHandler <<event handler>> {
+      +on(event: SatelliteObservationRecordedEvent): void
+    }
+  }
+
+  package "application.internal.outboundservices.acl" {
+    class ExternalFarmingService <<acl service>> {
+      -farmingContextFacade: FarmingContextFacade
+      +fetchOwnerUserIdByPlotId(plotId: Long): Optional<Long>
+      +fetchMonitoringPolygonIdByPlotId(plotId: Long): Optional<String>
+      +fetchRegionByPlotId(plotId: Long): Optional<String>
+      +fetchProducerUserIdsByRegion(region: String): List<Long>
+    }
+
+    class ExternalIamService <<acl service>> {
+      -iamContextFacade: IamContextFacade
+      +fetchEmailByUserId(userId: Long): Optional<String>
+    }
+  }
+
+  package "application.internal.outboundservices.monitoring" {
+    interface SatelliteImagery <<port>> {
+      +findLatest(polygonId: String, start: Instant, end: Instant): Optional<Measurement>
+      +Measurement(capturedAt: Instant, source: String, ndviMean: Double, ndwiMean: Double, cloudCoveragePercent: double): record
+    }
+
+    interface WeatherForecasting <<port>> {
+      +findForecast(polygonId: String): List<ForecastPoint>
+      +ForecastPoint(at: Instant, temperatureCelsius: double, rainMillimeters: double): record
+    }
+  }
+
+  package "application.internal.queryservices" {
+    class AgroclimaticAlertQueryServiceImpl <<service>> {
+      -alertRepository: AgroclimaticAlertRepository
+      +handle(query: GetAgroclimaticAlertsByRegionQuery): List<AgroclimaticAlert>
+    }
+
+    class ClimateForecastQueryServiceImpl <<service>> {
+      -forecastRepository: ClimateForecastRepository
+      +handle(query: GetClimateForecastsByRegionQuery): List<ClimateForecast>
+    }
+
+    class FieldInspectionQueryServiceImpl <<service>> {
+      -inspectionRepository: FieldInspectionRepository
+      +handle(query: GetFieldInspectionByIdQuery): Optional<FieldInspection>
+      +handle(query: GetAllFieldInspectionsByPlotIdQuery): List<FieldInspection>
+    }
+
+    class PestReportQueryServiceImpl <<service>> {
+      -pestReportRepository: PestReportRepository
+      +handle(query: GetPestReportByIdQuery): Optional<PestReport>
+      +handle(query: GetAllPestReportsByPlotIdQuery): List<PestReport>
+    }
+
+    class RegionalBulletinQueryServiceImpl <<service>> {
+      -bulletinRepository: RegionalBulletinRepository
+      +handle(query: GetRegionalBulletinsByRegionQuery): List<RegionalBulletin>
+    }
+
+    class SatelliteObservationQueryServiceImpl <<service>> {
+      -observationRepository: SatelliteObservationRepository
+      +handle(query: GetSatelliteObservationsByPlotIdQuery): List<SatelliteObservation>
+    }
+
+    class TechnicalPrescriptionQueryServiceImpl <<service>> {
+      -prescriptionRepository: TechnicalPrescriptionRepository
+      +handle(query: GetTechnicalPrescriptionByIdQuery): Optional<TechnicalPrescription>
+      +handle(query: GetTechnicalPrescriptionsByPlotIdQuery): List<TechnicalPrescription>
+    }
+  }
+
+  package "application.queryservices" {
+    interface AgroclimaticAlertQueryService <<service>> {
+      +handle(query: GetAgroclimaticAlertsByRegionQuery): List<AgroclimaticAlert>
+    }
+
+    interface ClimateForecastQueryService <<service>> {
+      +handle(query: GetClimateForecastsByRegionQuery): List<ClimateForecast>
+    }
+
+    interface FieldInspectionQueryService <<service>> {
+      +handle(query: GetFieldInspectionByIdQuery): Optional<FieldInspection>
+      +handle(query: GetAllFieldInspectionsByPlotIdQuery): List<FieldInspection>
+    }
+
+    interface PestReportQueryService <<service>> {
+      +handle(query: GetPestReportByIdQuery): Optional<PestReport>
+      +handle(query: GetAllPestReportsByPlotIdQuery): List<PestReport>
+    }
+
+    interface RegionalBulletinQueryService <<service>> {
+      +handle(query: GetRegionalBulletinsByRegionQuery): List<RegionalBulletin>
+    }
+
+    interface SatelliteObservationQueryService <<service>> {
+      +handle(query: GetSatelliteObservationsByPlotIdQuery): List<SatelliteObservation>
+    }
+
+    interface TechnicalPrescriptionQueryService <<service>> {
+      +handle(query: GetTechnicalPrescriptionByIdQuery): Optional<TechnicalPrescription>
+      +handle(query: GetTechnicalPrescriptionsByPlotIdQuery): List<TechnicalPrescription>
+    }
+  }
+
+  package "domain.exceptions" {
+    class FieldInspectionAlreadyCompletedException <<exception>> {
+      +FieldInspectionAlreadyCompletedException(fieldInspectionId: Long)
+    }
+
+    class FieldInspectionNotFoundException <<exception>> {
+      +FieldInspectionNotFoundException(fieldInspectionId: Long)
+    }
+
+    class InvalidPestReportStatusTransitionException <<exception>> {
+      +InvalidPestReportStatusTransitionException(currentStatus: PestReportStatus, targetStatus: PestReportStatus)
+    }
+
+    class PestReportNotFoundException <<exception>> {
+      +PestReportNotFoundException(pestReportId: Long)
+    }
+
+    class TechnicalPrescriptionAlreadyAppliedException <<exception>> {
+      +TechnicalPrescriptionAlreadyAppliedException(technicalPrescriptionId: Long)
+    }
+
+    class TechnicalPrescriptionNotFoundException <<exception>> {
+      +TechnicalPrescriptionNotFoundException(technicalPrescriptionId: Long)
+    }
+  }
+
+  package "domain.model.aggregates" {
+    class AgroclimaticAlert <<aggregate>> {
+      -id: Long
+      -title: String
+      -description: String
+      -severity: AgroclimaticAlertSeverity
+      -region: String
+      -issuedAt: Instant
+      -source: String
+      +AgroclimaticAlert(command: IssueAgroclimaticAlertCommand)
+      +{static} reconstitute(id: Long, title: String, description: String, severity: AgroclimaticAlertSeverity, region: String, issuedAt: Instant, source: String): AgroclimaticAlert
+    }
+
+    class ClimateForecast <<aggregate>> {
+      -id: Long
+      -region: String
+      -temperatureCelsius: double
+      -rainChance: Percentage
+      -forecastDate: Instant
+      -source: String
+      +ClimateForecast(command: RecordClimateForecastCommand)
+      +{static} reconstitute(id: Long, region: String, temperatureCelsius: double, rainChance: Percentage, forecastDate: Instant, source: String): ClimateForecast
+    }
+
+    class FieldInspection <<aggregate>> {
+      -id: Long
+      -pestReportId: Long
+      -plotId: Long
+      -agronomistId: Long
+      -scheduledAt: Instant
+      -status: FieldInspectionStatus
+      -findings: String
+      -completedAt: Instant
+      +FieldInspection(command: ScheduleFieldInspectionCommand, plotId: Long, currentTime: Instant)
+      +{static} reconstitute(id: Long, pestReportId: Long, plotId: Long, agronomistId: Long, scheduledAt: Instant, status: FieldInspectionStatus, findings: String, completedAt: Instant): FieldInspection
+      +complete(findings: String, currentTime: Instant): void
+    }
+
+    class PestReport <<aggregate>> {
+      -id: Long
+      -plotId: Long
+      -reporterId: Long
+      -description: String
+      -severity: PestReportSeverity
+      -status: PestReportStatus
+      +PestReport(command: RecordPestReportCommand)
+      +{static} reconstitute(id: Long, plotId: Long, reporterId: Long, description: String, severity: PestReportSeverity, status: PestReportStatus): PestReport
+      +markInspected(): void
+      +resolve(): void
+    }
+
+    class RegionalBulletin <<aggregate>> {
+      -id: Long
+      -agronomistId: Long
+      -region: String
+      -title: String
+      -content: String
+      -publishedAt: Instant
+      +RegionalBulletin(command: PublishRegionalBulletinCommand, publishedAt: Instant)
+      +{static} reconstitute(id: Long, agronomistId: Long, region: String, title: String, content: String, publishedAt: Instant): RegionalBulletin
+    }
+
+    class SatelliteObservation <<aggregate>> {
+      -id: Long
+      -plotId: Long
+      -capturedAt: Instant
+      -source: String
+      -ndviMean: NdviIndex
+      -ndwiMean: NdwiIndex
+      -cloudCoveragePercent: Percentage
+      -surfaceTempKelvin: Double
+      +SatelliteObservation(command: RecordSatelliteObservationCommand)
+      +{static} reconstitute(id: Long, plotId: Long, capturedAt: Instant, source: String, ndviMean: NdviIndex, ndwiMean: NdwiIndex, cloudCoveragePercent: Percentage, surfaceTempKelvin: Double): SatelliteObservation
+    }
+
+    class TechnicalPrescription <<aggregate>> {
+      -id: Long
+      -pestReportId: Long
+      -plotId: Long
+      -agronomistId: Long
+      -product: String
+      -dosage: String
+      -instructions: String
+      -applicationDate: LocalDate
+      -status: TechnicalPrescriptionStatus
+      -appliedAt: Instant
+      +TechnicalPrescription(command: IssueTechnicalPrescriptionCommand, plotId: Long, today: LocalDate)
+      +{static} reconstitute(id: Long, pestReportId: Long, plotId: Long, agronomistId: Long, product: String, dosage: String, instructions: String, applicationDate: LocalDate, status: TechnicalPrescriptionStatus, appliedAt: Instant): TechnicalPrescription
+      +registerApplication(confirmationTime: Instant): void
+    }
+  }
+
+  package "domain.model.commands" {
+    class CompleteFieldInspectionCommand <<record>> {
+      +fieldInspectionId: Long
+      +findings: String
+    }
+
+    class DeletePestReportCommand <<record>> {
+      +pestReportId: Long
+    }
+
+    class ImportClimateForecastCommand <<record>> {
+      +plotId: Long
+      +requestedByUserId: Long
+    }
+
+    class ImportSatelliteObservationCommand <<record>> {
+      +plotId: Long
+      +requestedByUserId: Long
+      +start: Instant
+      +end: Instant
+    }
+
+    class IssueAgroclimaticAlertCommand <<record>> {
+      +title: String
+      +description: String
+      +severity: AgroclimaticAlertSeverity
+      +region: String
+      +issuedAt: Instant
+      +source: String
+    }
+
+    class IssueTechnicalPrescriptionCommand <<record>> {
+      +pestReportId: Long
+      +agronomistId: Long
+      +product: String
+      +dosage: String
+      +instructions: String
+      +applicationDate: LocalDate
+    }
+
+    class MarkPestReportAsInspectedCommand <<record>> {
+      +pestReportId: Long
+    }
+
+    class PublishRegionalBulletinCommand <<record>> {
+      +agronomistId: Long
+      +region: String
+      +title: String
+      +content: String
+    }
+
+    class RecordClimateForecastCommand <<record>> {
+      +region: String
+      +temperatureCelsius: double
+      +rainChance: Percentage
+      +forecastDate: Instant
+      +source: String
+    }
+
+    class RecordPestReportCommand <<record>> {
+      +plotId: Long
+      +reporterId: Long
+      +description: String
+      +severity: PestReportSeverity
+    }
+
+    class RecordSatelliteObservationCommand <<record>> {
+      +plotId: Long
+      +capturedAt: Instant
+      +source: String
+      +ndviMean: NdviIndex
+      +ndwiMean: NdwiIndex
+      +cloudCoveragePercent: Percentage
+      +surfaceTempKelvin: Double
+    }
+
+    class RegisterTechnicalPrescriptionApplicationCommand <<record>> {
+      +technicalPrescriptionId: Long
+    }
+
+    class ResolvePestReportCommand <<record>> {
+      +pestReportId: Long
+    }
+
+    class ScheduleFieldInspectionCommand <<record>> {
+      +pestReportId: Long
+      +agronomistId: Long
+      +scheduledAt: Instant
+    }
+  }
+
+  package "domain.model.events" {
+    class AgroclimaticAlertIssuedEvent <<domain event>> {
+      -title: String
+      -description: String
+      -severity: AgroclimaticAlertSeverity
+      -region: String
+      -issuedAt: Instant
+      -alertSource: String
+      +AgroclimaticAlertIssuedEvent(source: Object, title: String, description: String, severity: AgroclimaticAlertSeverity, region: String, issuedAt: Instant, alertSource: String)
+    }
+
+    class ClimateForecastRecordedEvent <<domain event>> {
+      -region: String
+      -temperatureCelsius: double
+      -rainChance: Percentage
+      -forecastDate: Instant
+      -forecastSource: String
+      +ClimateForecastRecordedEvent(source: Object, region: String, temperatureCelsius: double, rainChance: Percentage, forecastDate: Instant, forecastSource: String)
+    }
+
+    class FieldInspectionCompletedEvent <<domain event>> {
+      -fieldInspectionId: Long
+      -pestReportId: Long
+      -plotId: Long
+      -completedAt: Instant
+      +FieldInspectionCompletedEvent(source: Object, fieldInspectionId: Long, pestReportId: Long, plotId: Long, completedAt: Instant)
+    }
+
+    class PestReportRecordedEvent <<domain event>> {
+      -pestReportId: Long
+      -plotId: Long
+      -reporterId: Long
+      +PestReportRecordedEvent(source: Object, pestReportId: Long, plotId: Long, reporterId: Long)
+    }
+
+    class SatelliteObservationRecordedEvent <<domain event>> {
+      -plotId: Long
+      -capturedAt: Instant
+      -observationSource: String
+      -ndviMean: NdviIndex
+      -ndwiMean: NdwiIndex
+      -cloudCoveragePercent: Percentage
+      -surfaceTempKelvin: Double
+      +SatelliteObservationRecordedEvent(source: Object, plotId: Long, capturedAt: Instant, observationSource: String, ndviMean: NdviIndex, ndwiMean: NdwiIndex, cloudCoveragePercent: Percentage, surfaceTempKelvin: Double)
+    }
+  }
+
+  package "domain.model.queries" {
+    class GetAgroclimaticAlertsByRegionQuery <<record>> {
+      +region: String
+    }
+
+    class GetAllFieldInspectionsByPlotIdQuery <<record>> {
+      +plotId: Long
+    }
+
+    class GetAllPestReportsByPlotIdQuery <<record>> {
+      +plotId: Long
+    }
+
+    class GetClimateForecastsByRegionQuery <<record>> {
+      +region: String
+    }
+
+    class GetFieldInspectionByIdQuery <<record>> {
+      +fieldInspectionId: Long
+    }
+
+    class GetPestReportByIdQuery <<record>> {
+      +pestReportId: Long
+    }
+
+    class GetRegionalBulletinsByRegionQuery <<record>> {
+      +region: String
+    }
+
+    class GetSatelliteObservationsByPlotIdQuery <<record>> {
+      +plotId: Long
+    }
+
+    class GetTechnicalPrescriptionByIdQuery <<record>> {
+      +technicalPrescriptionId: Long
+    }
+
+    class GetTechnicalPrescriptionsByPlotIdQuery <<record>> {
+      +plotId: Long
+    }
+  }
+
+  package "domain.model.valueobjects" {
+    enum AgroclimaticAlertSeverity <<enum>> {
+      LOW
+      MEDIUM
+      HIGH
+      CRITICAL
+    }
+
+    enum CaseAssessmentOutcome <<enum>> {
+      FOLLOW_UP_REQUIRED
+      RECOVERED
+    }
+
+    enum FieldInspectionStatus <<enum>> {
+      SCHEDULED
+      COMPLETED
+    }
+
+    class NdviIndex <<value object>> {
+      +value: double
+    }
+
+    class NdwiIndex <<value object>> {
+      +value: double
+    }
+
+    class Percentage <<value object>> {
+      +value: double
+    }
+
+    enum PestReportSeverity <<enum>> {
+      LOW
+      MEDIUM
+      HIGH
+      SEVERE
+    }
+
+    enum PestReportStatus <<enum>> {
+      PENDING
+      INSPECTED
+      RESOLVED
+    }
+
+    enum TechnicalPrescriptionStatus <<enum>> {
+      ISSUED
+      APPLIED
+    }
+
+    enum TreatmentFollowUpKind <<enum>> {
+      APPLICATION
+      EVOLUTION
+    }
+  }
+
+  package "domain.repositories" {
+    interface AgroclimaticAlertRepository <<repository>> {
+      +save(alert: AgroclimaticAlert): AgroclimaticAlert
+      +findAllByRegion(region: String): List<AgroclimaticAlert>
+    }
+
+    interface ClimateForecastRepository <<repository>> {
+      +save(forecast: ClimateForecast): ClimateForecast
+      +findAllByRegion(region: String): List<ClimateForecast>
+    }
+
+    interface FieldInspectionRepository <<repository>> {
+      +save(fieldInspection: FieldInspection): FieldInspection
+      +findById(fieldInspectionId: Long): Optional<FieldInspection>
+      +findAllByPlotId(plotId: Long): List<FieldInspection>
+      +existsByPestReportId(pestReportId: Long): boolean
+    }
+
+    interface PestReportRepository <<repository>> {
+      +save(pestReport: PestReport): PestReport
+      +findById(pestReportId: Long): Optional<PestReport>
+      +findAllByPlotId(plotId: Long): List<PestReport>
+      +deleteById(pestReportId: Long): void
+    }
+
+    interface RegionalBulletinRepository <<repository>> {
+      +save(bulletin: RegionalBulletin): RegionalBulletin
+      +findAllByRegion(region: String): List<RegionalBulletin>
+    }
+
+    interface SatelliteObservationRepository <<repository>> {
+      +save(observation: SatelliteObservation): SatelliteObservation
+      +saveImported(observation: SatelliteObservation): SatelliteObservation
+      +findAllByPlotId(plotId: Long): List<SatelliteObservation>
+    }
+
+    interface TechnicalPrescriptionRepository <<repository>> {
+      +save(prescription: TechnicalPrescription): TechnicalPrescription
+      +findById(technicalPrescriptionId: Long): Optional<TechnicalPrescription>
+      +findAllByPlotId(plotId: Long): List<TechnicalPrescription>
+      +existsByPestReportId(pestReportId: Long): boolean
+    }
+  }
+
+  package "infrastructure.agromonitoring.rest" {
+    class AgroMonitoringSatelliteImagery <<adapter>> {
+      -baseUri: URI
+      -apiKey: String
+      -client: RestClient
+      +findLatest(polygonId: String, start: Instant, end: Instant): Optional<Measurement>
+    }
+
+    class AgroMonitoringWeatherForecast <<adapter>> {
+      -apiKey: String
+      -client: RestClient
+      +findForecast(polygonId: String): List<ForecastPoint>
+    }
+  }
+
+  package "infrastructure.persistence.jpa.adapters" {
+    class AgroclimaticAlertRepositoryImpl <<adapter>> {
+      -persistenceRepository: AgroclimaticAlertPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +save(alert: AgroclimaticAlert): AgroclimaticAlert
+      +findAllByRegion(region: String): List<AgroclimaticAlert>
+    }
+
+    class ClimateForecastRepositoryImpl <<adapter>> {
+      -persistenceRepository: ClimateForecastPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +save(forecast: ClimateForecast): ClimateForecast
+      +findAllByRegion(region: String): List<ClimateForecast>
+    }
+
+    class FieldInspectionRepositoryImpl <<adapter>> {
+      -persistenceRepository: FieldInspectionPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +save(inspection: FieldInspection): FieldInspection
+      +findById(fieldInspectionId: Long): Optional<FieldInspection>
+      +findAllByPlotId(plotId: Long): List<FieldInspection>
+      +existsByPestReportId(pestReportId: Long): boolean
+    }
+
+    class PestReportRepositoryImpl <<adapter>> {
+      -persistenceRepository: PestReportPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +save(pestReport: PestReport): PestReport
+      +findById(pestReportId: Long): Optional<PestReport>
+      +findAllByPlotId(plotId: Long): List<PestReport>
+      +deleteById(pestReportId: Long): void
+    }
+
+    class RegionalBulletinRepositoryImpl <<adapter>> {
+      -persistenceRepository: RegionalBulletinPersistenceRepository
+      +save(bulletin: RegionalBulletin): RegionalBulletin
+      +findAllByRegion(region: String): List<RegionalBulletin>
+    }
+
+    class SatelliteObservationRepositoryImpl <<adapter>> {
+      -persistenceRepository: SatelliteObservationPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +save(observation: SatelliteObservation): SatelliteObservation
+      +saveImported(observation: SatelliteObservation): SatelliteObservation
+      +findAllByPlotId(plotId: Long): List<SatelliteObservation>
+    }
+
+    class TechnicalPrescriptionRepositoryImpl <<adapter>> {
+      -persistenceRepository: TechnicalPrescriptionPersistenceRepository
+      +save(prescription: TechnicalPrescription): TechnicalPrescription
+      +findById(technicalPrescriptionId: Long): Optional<TechnicalPrescription>
+      +findAllByPlotId(plotId: Long): List<TechnicalPrescription>
+      +existsByPestReportId(pestReportId: Long): boolean
+    }
+  }
 }
 
-class AgroclimaticAlert <<Aggregate Root>> {
-  - id: Long
+' Collaborators from other bounded contexts and the Shared Kernel
+
+package "com.dymbia.sumaqagro.platform.farming.interfaces.acl" {
+  interface FarmingContextFacade <<facade>> {
+    +fetchOwnerUserIdByFieldPlotId(fieldPlotId: Long): Long
+    +fetchAgroMonitoringPolygonIdByFieldPlotId(fieldPlotId: Long): String
+    +fetchFieldPlotRegionById(fieldPlotId: Long): String
+    +fetchOwnerUserIdsByRegion(region: String): List<Long>
+  }
 }
 
-class RegionalBulletin <<Aggregate Root>> {
-  - id: Long
-  - agronomistId: Long
+package "com.dymbia.sumaqagro.platform.iam.interfaces.acl" {
+  interface IamContextFacade <<facade>> {
+    +fetchEmailByUserId(userId: Long): String
+  }
 }
 
-class PestReport <<Aggregate Root>> {
-  - id: Long
-  - plotId: Long
-  - reporterId: Long
+package "com.dymbia.sumaqagro.platform.shared.application.outboundservices.email" {
+  interface EmailSender <<port>> {
+    +send(recipient: String, subject: String, htmlContent: String): void
+  }
 }
 
-class FieldInspection <<Aggregate Root>> {
-  - id: Long
-  - pestReportId: Long
-  - plotId: Long
-  - agronomistId: Long
+package "com.dymbia.sumaqagro.platform.shared.domain.model.aggregates" {
+  abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+    #registerDomainEvent(event: Object): void
+    +domainEvents(): Collection<Object>
+    +clearDomainEvents(): void
+  }
 }
 
-class TechnicalPrescription <<Aggregate Root>> {
-  - id: Long
-  - pestReportId: Long
-  - plotId: Long
-  - agronomistId: Long
+package "com.dymbia.sumaqagro.platform.shared.infrastructure.events" {
+  class DomainEventPublisher <<component>> {
+    +publishAndClearEvents(aggregate: T): void
+  }
 }
 
-class NdviIndex <<Value Object>>
-class NdwiIndex <<Value Object>>
-enum AgroclimaticAlertSeverity
-enum PestReportSeverity
-enum PestReportStatus
-enum FieldInspectionStatus
-enum TechnicalPrescriptionStatus
+' Relationships
 
-SatelliteObservation --> NdviIndex
-SatelliteObservation --> NdwiIndex
+' --- Crop Health (Crop) Bounded Context Relationships ---
+AgroclimaticAlertCommandServiceImpl ..|> AgroclimaticAlertCommandService
+AgroclimaticAlertCommandServiceImpl --> AgroclimaticAlertRepository
+ClimateForecastCommandServiceImpl ..|> ClimateForecastCommandService
+ClimateForecastCommandServiceImpl --> ClimateForecastRepository
+ClimateForecastCommandServiceImpl --> AgroclimaticAlertCommandService
+ClimateForecastCommandServiceImpl --> ExternalFarmingService
+ClimateForecastCommandServiceImpl --> WeatherForecasting
+FieldInspectionCommandServiceImpl ..|> FieldInspectionCommandService
+FieldInspectionCommandServiceImpl --> FieldInspectionRepository
+FieldInspectionCommandServiceImpl --> PestReportRepository
+PestReportCommandServiceImpl ..|> PestReportCommandService
+PestReportCommandServiceImpl --> PestReportRepository
+RegionalBulletinCommandServiceImpl ..|> RegionalBulletinCommandService
+RegionalBulletinCommandServiceImpl --> RegionalBulletinRepository
+SatelliteObservationCommandServiceImpl ..|> SatelliteObservationCommandService
+SatelliteObservationCommandServiceImpl --> SatelliteObservationRepository
+SatelliteObservationCommandServiceImpl --> ExternalFarmingService
+SatelliteObservationCommandServiceImpl --> SatelliteImagery
+TechnicalPrescriptionCommandServiceImpl ..|> TechnicalPrescriptionCommandService
+TechnicalPrescriptionCommandServiceImpl --> TechnicalPrescriptionRepository
+TechnicalPrescriptionCommandServiceImpl --> PestReportRepository
+AgroclimaticAlertIssuedEventHandler --> ExternalFarmingService
+AgroclimaticAlertIssuedEventHandler --> ExternalIamService
+AgroclimaticAlertIssuedEventHandler --> EmailSender
+AgroclimaticAlertIssuedEventHandler ..> AgroclimaticAlertIssuedEvent : handles
+ClimateForecastRecordedEventHandler ..> ClimateForecastRecordedEvent : handles
+FieldInspectionCompletedEventHandler --> PestReportCommandService
+FieldInspectionCompletedEventHandler ..> FieldInspectionCompletedEvent : handles
+PestReportRecordedEventHandler ..> PestReportRecordedEvent : handles
+SatelliteObservationRecordedEventHandler ..> SatelliteObservationRecordedEvent : handles
+AgroclimaticAlertQueryServiceImpl ..|> AgroclimaticAlertQueryService
+AgroclimaticAlertQueryServiceImpl --> AgroclimaticAlertRepository
+ClimateForecastQueryServiceImpl ..|> ClimateForecastQueryService
+ClimateForecastQueryServiceImpl --> ClimateForecastRepository
+FieldInspectionQueryServiceImpl ..|> FieldInspectionQueryService
+FieldInspectionQueryServiceImpl --> FieldInspectionRepository
+PestReportQueryServiceImpl ..|> PestReportQueryService
+PestReportQueryServiceImpl --> PestReportRepository
+RegionalBulletinQueryServiceImpl ..|> RegionalBulletinQueryService
+RegionalBulletinQueryServiceImpl --> RegionalBulletinRepository
+SatelliteObservationQueryServiceImpl ..|> SatelliteObservationQueryService
+SatelliteObservationQueryServiceImpl --> SatelliteObservationRepository
+TechnicalPrescriptionQueryServiceImpl ..|> TechnicalPrescriptionQueryService
+TechnicalPrescriptionQueryServiceImpl --> TechnicalPrescriptionRepository
+AgroclimaticAlert --|> AbstractDomainAggregateRoot
 AgroclimaticAlert --> AgroclimaticAlertSeverity
+AgroclimaticAlert ..> AgroclimaticAlertIssuedEvent : registers
+ClimateForecast --|> AbstractDomainAggregateRoot
+ClimateForecast *-- Percentage
+ClimateForecast ..> ClimateForecastRecordedEvent : registers
+FieldInspection --|> AbstractDomainAggregateRoot
+FieldInspection --> FieldInspectionStatus
+FieldInspection ..> FieldInspectionCompletedEvent : registers
+PestReport --|> AbstractDomainAggregateRoot
 PestReport --> PestReportSeverity
 PestReport --> PestReportStatus
-FieldInspection --> FieldInspectionStatus
+RegionalBulletin --|> AbstractDomainAggregateRoot
+SatelliteObservation --|> AbstractDomainAggregateRoot
+SatelliteObservation *-- NdviIndex
+SatelliteObservation *-- NdwiIndex
+SatelliteObservation *-- Percentage
+SatelliteObservation ..> SatelliteObservationRecordedEvent : registers
+TechnicalPrescription --|> AbstractDomainAggregateRoot
 TechnicalPrescription --> TechnicalPrescriptionStatus
-FieldInspection ..> PestReport : pestReportId
-TechnicalPrescription ..> PestReport : pestReportId
+IssueAgroclimaticAlertCommand --> AgroclimaticAlertSeverity
+RecordClimateForecastCommand --> Percentage
+RecordPestReportCommand --> PestReportSeverity
+RecordSatelliteObservationCommand --> NdviIndex
+RecordSatelliteObservationCommand --> NdwiIndex
+RecordSatelliteObservationCommand --> Percentage
+AgroclimaticAlertIssuedEvent --> AgroclimaticAlertSeverity
+ClimateForecastRecordedEvent --> Percentage
+SatelliteObservationRecordedEvent --> NdviIndex
+SatelliteObservationRecordedEvent --> NdwiIndex
+SatelliteObservationRecordedEvent --> Percentage
+AgroMonitoringSatelliteImagery ..|> SatelliteImagery
+AgroMonitoringWeatherForecast ..|> WeatherForecasting
+AgroclimaticAlertRepositoryImpl ..|> AgroclimaticAlertRepository
+AgroclimaticAlertRepositoryImpl --> DomainEventPublisher
+ClimateForecastRepositoryImpl ..|> ClimateForecastRepository
+ClimateForecastRepositoryImpl --> DomainEventPublisher
+FieldInspectionRepositoryImpl ..|> FieldInspectionRepository
+FieldInspectionRepositoryImpl --> DomainEventPublisher
+PestReportRepositoryImpl ..|> PestReportRepository
+PestReportRepositoryImpl --> DomainEventPublisher
+RegionalBulletinRepositoryImpl ..|> RegionalBulletinRepository
+SatelliteObservationRepositoryImpl ..|> SatelliteObservationRepository
+SatelliteObservationRepositoryImpl --> DomainEventPublisher
+TechnicalPrescriptionRepositoryImpl ..|> TechnicalPrescriptionRepository
+AgroclimaticAlertsController --> AgroclimaticAlertQueryService
+ClimateForecastsController --> ClimateForecastQueryService
+ClimateForecastsController --> ClimateForecastCommandService
+FieldInspectionsController --> FieldInspectionCommandService
+FieldInspectionsController --> FieldInspectionQueryService
+PestReportsController --> PestReportCommandService
+PestReportsController --> PestReportQueryService
+RegionalBulletinsController --> RegionalBulletinCommandService
+RegionalBulletinsController --> RegionalBulletinQueryService
+SatelliteObservationsController --> SatelliteObservationQueryService
+SatelliteObservationsController --> SatelliteObservationCommandService
+TechnicalPrescriptionsController --> TechnicalPrescriptionCommandService
+TechnicalPrescriptionsController --> TechnicalPrescriptionQueryService
+AgroclimaticAlertResource --> AgroclimaticAlertSeverity
+FieldInspectionResource --> FieldInspectionStatus
+PestReportResource --> PestReportSeverity
+PestReportResource --> PestReportStatus
+RecordPestReportResource --> PestReportSeverity
+TechnicalPrescriptionResource --> TechnicalPrescriptionStatus
+AgroclimaticAlertResourceFromEntityAssembler ..> AgroclimaticAlert
+AgroclimaticAlertResourceFromEntityAssembler ..> AgroclimaticAlertResource
+ClimateForecastResourceFromEntityAssembler ..> ClimateForecast
+ClimateForecastResourceFromEntityAssembler ..> ClimateForecastResource
+CompleteFieldInspectionCommandFromResourceAssembler ..> CompleteFieldInspectionCommand
+CompleteFieldInspectionCommandFromResourceAssembler ..> CompleteFieldInspectionResource
+FieldInspectionResourceFromEntityAssembler ..> FieldInspection
+FieldInspectionResourceFromEntityAssembler ..> FieldInspectionResource
+ImportSatelliteObservationCommandFromResourceAssembler ..> ImportSatelliteObservationCommand
+ImportSatelliteObservationCommandFromResourceAssembler ..> ImportSatelliteObservationResource
+IssueTechnicalPrescriptionCommandFromResourceAssembler ..> IssueTechnicalPrescriptionCommand
+IssueTechnicalPrescriptionCommandFromResourceAssembler ..> IssueTechnicalPrescriptionResource
+PestReportResourceFromEntityAssembler ..> PestReport
+PestReportResourceFromEntityAssembler ..> PestReportResource
+PublishRegionalBulletinCommandFromResourceAssembler ..> PublishRegionalBulletinCommand
+PublishRegionalBulletinCommandFromResourceAssembler ..> PublishRegionalBulletinResource
+RecordPestReportCommandFromResourceAssembler ..> RecordPestReportCommand
+RecordPestReportCommandFromResourceAssembler ..> RecordPestReportResource
+RegionalBulletinResourceFromEntityAssembler ..> RegionalBulletin
+RegionalBulletinResourceFromEntityAssembler ..> RegionalBulletinResource
+RegisterTechnicalPrescriptionApplicationCommandFromResourceAssembler ..> RegisterTechnicalPrescriptionApplicationCommand
+RegisterTechnicalPrescriptionApplicationCommandFromResourceAssembler ..> RegisterTechnicalPrescriptionApplicationResource
+SatelliteObservationResourceFromEntityAssembler ..> SatelliteObservation
+SatelliteObservationResourceFromEntityAssembler ..> SatelliteObservationResource
+ScheduleFieldInspectionCommandFromResourceAssembler ..> ScheduleFieldInspectionCommand
+ScheduleFieldInspectionCommandFromResourceAssembler ..> ScheduleFieldInspectionResource
+TechnicalPrescriptionResourceFromEntityAssembler ..> TechnicalPrescription
+TechnicalPrescriptionResourceFromEntityAssembler ..> TechnicalPrescriptionResource
+
+' --- Cross-Context Invocations ---
+ExternalFarmingService ..> FarmingContextFacade : cross-context sync (ACL)
+ExternalIamService ..> IamContextFacade : cross-context sync (ACL)
+
 @enduml

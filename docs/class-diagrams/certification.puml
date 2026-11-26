@@ -1,0 +1,714 @@
+@startuml
+' SumaqAgro Platform - Harvest Certification Bounded Context Class Diagram
+' Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)
+' Technology Stack: Java 27, Spring Boot 4.1.2
+
+
+title
+  <b>SumaqAgro Platform - Harvest Certification Bounded Context</b>
+  <i>Architecture: Modular Monolith with Layered Domain-Driven Design (DDD)</i>
+  <i>Runtime: Java 27 | Spring Boot 4.1.2 | Harvest Batches | Quality Certificates | Public Traceability</i>
+end title
+
+header SumaqAgro Platform - Architecture & Domain Model
+footer Page %page% of %lastpage% - Modular Monolith with Layered DDD
+
+
+' Global Styling Parameters
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+skinparam roundcorner 5
+skinparam dpi 150
+skinparam wrapWidth 200
+skinparam maxMessageSize 150
+left to right direction
+
+skinparam class {
+  BackgroundColor White
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+}
+skinparam class<<aggregate>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam class<<entity>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam class<<value object>> {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam class<<record>> {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam class<<controller>> {
+  BackgroundColor #FFFDE7
+  BorderColor #FBC02D
+}
+skinparam class<<service>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam class<<repository>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C2185B
+}
+skinparam class<<adapter>> {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+}
+skinparam class<<facade>> {
+  BackgroundColor #E0F7FA
+  BorderColor #00838F
+}
+skinparam class<<event handler>> {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
+}
+
+' Diagram Legend
+
+legend right
+  |= Stereotype |= Classification |= Layer |
+  |<back:#E3F2FD> <<aggregate>> </back> | Aggregate Root (Encapsulated) | Domain Layer |
+  |<back:#E8F5E9> <<entity>> </back> | Domain Entity | Domain Layer |
+  |<back:#FFF3E0> <<value object>> </back> | Tactical Value Object | Domain Layer |
+  |<back:#FFF8E1> <<record>> </back> | Immutable Java Record | Domain / Interfaces |
+  |<back:#F3E5F5> <<service>> </back> | Command / Query Service (CQRS) | Application Layer |
+  |<back:#FCE4EC> <<repository>> </back> | Domain Repository Port | Domain Layer |
+  |<back:#ECEFF1> <<adapter>> </back> | Infrastructure Adapter (JPA/Security/Brevo) | Infrastructure Layer |
+  |<back:#FFFDE7> <<controller>> </back> | REST Controller (Endpoints) | Interfaces Layer |
+  |<back:#E0F7FA> <<facade>> </back> | Anti-Corruption Layer (ACL) | Interfaces / Application |
+  |<back:#F1F8E9> <<event handler>> </back> | Application Event Handler | Application Layer |
+endlegend
+
+' Harvest Certification Bounded Context
+
+package "com.dymbia.sumaqagro.platform.certification" {
+
+  package "interfaces.rest" {
+    class CertificationAccess <<component>> {
+      -queries: HarvestCertificationQueryService
+      -profiles: ExternalProfilesService
+      -fields: ExternalFarmingService
+    }
+
+    class CertificationWorkspaceController <<controller>> {
+      -queries: HarvestCertificationQueryService
+      -access: CertificationAccess
+      -publicBaseUrl: String
+      +list(cooperativeId: Long, principal: UserDetailsImpl): ResponseEntity<List<BatchEntry>>
+      +download(qualityCertificateId: Long, principal: UserDetailsImpl): ResponseEntity<byte[]>
+      +BatchEntry(batch: HarvestBatchResource, certificate: QualityCertificateResource): record
+    }
+
+    class HarvestBatchesController <<controller>> {
+      -access: CertificationAccess
+      -harvestBatchCommandService: HarvestBatchCommandService
+      -harvestCertificationQueryService: HarvestCertificationQueryService
+      +registerHarvestBatch(resource: RegisterHarvestBatchResource, principal: UserDetailsImpl): ResponseEntity<?>
+      +getHarvestBatchById(harvestBatchId: Long, principal: UserDetailsImpl): ResponseEntity<?>
+      +weighHarvestBatch(harvestBatchId: Long, resource: WeighHarvestBatchResource, principal: UserDetailsImpl): ResponseEntity<?>
+      +extractRepresentativeSample(harvestBatchId: Long, resource: ExtractRepresentativeSampleResource, principal: UserDetailsImpl): ResponseEntity<?>
+      +gradePotatoCalibers(harvestBatchId: Long, resource: GradePotatoCalibersResource, principal: UserDetailsImpl): ResponseEntity<?>
+      +cupCoffee(harvestBatchId: Long, resource: CupCoffeeResource, principal: UserDetailsImpl): ResponseEntity<?>
+    }
+
+    class PublicTraceabilityController <<controller>> {
+      -harvestCertificationQueryService: HarvestCertificationQueryService
+      +verify(number: String, hash: String): ResponseEntity<?>
+    }
+
+    class QualityCertificatesController <<controller>> {
+      -access: CertificationAccess
+      -qualityCertificateCommandService: QualityCertificateCommandService
+      -harvestCertificationQueryService: HarvestCertificationQueryService
+      -publicBaseUrl: String
+      +issueQualityCertificate(resource: IssueQualityCertificateResource, principal: UserDetailsImpl): ResponseEntity<?>
+      +getQualityCertificateByNumber(certificateNumber: String, principal: UserDetailsImpl): ResponseEntity<?>
+      +revokeQualityCertificate(qualityCertificateId: Long, principal: UserDetailsImpl): ResponseEntity<?>
+    }
+  }
+
+  package "interfaces.rest.resources" {
+    class CupCoffeeResource <<record>> {
+      +aroma: BigDecimal
+      +flavor: BigDecimal
+      +acidity: BigDecimal
+      +body: BigDecimal
+      +totalScore: BigDecimal
+      +fermentDefect: boolean
+    }
+
+    class ExtractRepresentativeSampleResource <<record>> {
+      +sampleIdentifier: String
+      +sampleWeightKg: BigDecimal
+    }
+
+    class GradePotatoCalibersResource <<record>> {
+      +firstPercentage: BigDecimal
+      +secondPercentage: BigDecimal
+      +thirdPercentage: BigDecimal
+      +pestDamagePercentage: BigDecimal
+    }
+
+    class HarvestBatchResource <<record>> {
+      +id: Long
+      +batchCode: String
+      +cooperativeId: Long
+      +memberId: Long
+      +plotId: Long
+      +cropType: String
+      +harvestedOn: LocalDate
+      +registeredAt: Instant
+      +status: String
+      +netWeightKg: BigDecimal
+      +sampleIdentifier: String
+      +sampleWeightKg: BigDecimal
+      +firstCaliberPercentage: BigDecimal
+      +secondCaliberPercentage: BigDecimal
+      +thirdCaliberPercentage: BigDecimal
+      +pestDamagePercentage: BigDecimal
+      +coffeeCuppingScore: BigDecimal
+      +coffeeFermentDefect: boolean
+      +qualityScore: BigDecimal
+      +qualityCategory: String
+    }
+
+    class IssueQualityCertificateResource <<record>> {
+      +certificateNumber: String
+      +harvestBatchId: Long
+      +issuedByUserId: Long
+    }
+
+    class PublicTraceabilityResource <<record>> {
+      +certificateNumber: String
+      +status: String
+      +authentic: boolean
+      +batchCode: String
+      +cropType: String
+      +qualityCategory: String
+      +qualityScore: BigDecimal
+      +plotName: String
+      +region: String
+      +seedVariety: String
+    }
+
+    class QualityCertificateResource <<record>> {
+      +id: Long
+      +certificateNumber: String
+      +harvestBatchId: Long
+      +qualityCategory: String
+      +certificateHash: String
+      +issuedByUserId: Long
+      +issuedAt: Instant
+      +status: String
+    }
+
+    class RegisterHarvestBatchResource <<record>> {
+      +batchCode: String
+      +cooperativeId: Long
+      +memberId: Long
+      +plotId: Long
+      +cropType: String
+      +harvestedOn: LocalDate
+    }
+
+    class WeighHarvestBatchResource <<record>> {
+      +grossWeightKg: BigDecimal
+      +tareKg: BigDecimal
+    }
+  }
+
+  package "interfaces.rest.transform" {
+    class CupCoffeeCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(harvestBatchId: Long, resource: CupCoffeeResource): CupCoffeeCommand
+    }
+
+    class ExtractRepresentativeSampleCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(harvestBatchId: Long, resource: ExtractRepresentativeSampleResource): ExtractRepresentativeSampleCommand
+    }
+
+    class GradePotatoCalibersCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(harvestBatchId: Long, resource: GradePotatoCalibersResource): GradePotatoCalibersCommand
+    }
+
+    class HarvestBatchResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: HarvestBatch): HarvestBatchResource
+    }
+
+    class IssueQualityCertificateCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: IssueQualityCertificateResource, qualityCategory: QualityCategory, certificateHash: String, issuedAt: Instant): IssueQualityCertificateCommand
+    }
+
+    class PublicTraceabilityResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: PublicTraceability): PublicTraceabilityResource
+    }
+
+    class QualityCertificateResourceFromEntityAssembler <<assembler>> {
+      +{static} toResourceFromEntity(entity: QualityCertificate): QualityCertificateResource
+    }
+
+    class RegisterHarvestBatchCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(resource: RegisterHarvestBatchResource): RegisterHarvestBatchCommand
+    }
+
+    class WeighHarvestBatchCommandFromResourceAssembler <<assembler>> {
+      +{static} toCommandFromResource(harvestBatchId: Long, resource: WeighHarvestBatchResource): WeighHarvestBatchCommand
+    }
+  }
+
+  package "application.acl" {
+    interface ExternalFarmingService <<acl service>> {
+      +findOriginByPlotId(plotId: Long): Optional<FieldOrigin>
+      +fetchOwnerUserIdByPlotId(plotId: Long): Optional<Long>
+      +FieldOrigin(plotName: String, region: String, seedVariety: String): record
+    }
+
+    interface ExternalProfilesService <<acl service>> {
+      +memberBelongsToCooperative(cooperativeId: Long, memberId: Long): boolean
+      +managesCooperative(userId: Long, cooperativeId: Long): boolean
+      +fetchUserIdOfActiveMember(cooperativeId: Long, memberId: Long): Optional<Long>
+      +fetchActiveMemberIds(userId: Long, cooperativeId: Long): List<Long>
+    }
+  }
+
+  package "application.commandservices" {
+    interface HarvestBatchCommandService <<service>> {
+      +handle(command: RegisterHarvestBatchCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: WeighHarvestBatchCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: ExtractRepresentativeSampleCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: GradePotatoCalibersCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: CupCoffeeCommand): Result<HarvestBatch, ApplicationError>
+    }
+
+    interface QualityCertificateCommandService <<service>> {
+      +handle(command: IssueQualityCertificateCommand): Result<QualityCertificate, ApplicationError>
+      +handle(command: RevokeQualityCertificateCommand): Result<QualityCertificate, ApplicationError>
+    }
+  }
+
+  package "application.internal.commandservices" {
+    class HarvestBatchCommandServiceImpl <<service>> {
+      -harvestBatchRepository: HarvestBatchRepository
+      -externalProfilesService: ExternalProfilesService
+      +handle(command: RegisterHarvestBatchCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: WeighHarvestBatchCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: ExtractRepresentativeSampleCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: GradePotatoCalibersCommand): Result<HarvestBatch, ApplicationError>
+      +handle(command: CupCoffeeCommand): Result<HarvestBatch, ApplicationError>
+    }
+
+    class QualityCertificateCommandServiceImpl <<service>> {
+      -qualityCertificateRepository: QualityCertificateRepository
+      -harvestBatchRepository: HarvestBatchRepository
+      -publicBaseUrl: String
+      +handle(command: IssueQualityCertificateCommand): Result<QualityCertificate, ApplicationError>
+      +handle(command: RevokeQualityCertificateCommand): Result<QualityCertificate, ApplicationError>
+    }
+  }
+
+  package "application.internal.eventhandlers" {
+    class BatchGradedEventHandler <<event handler>> {
+      -harvestBatchRepository: HarvestBatchRepository
+      +on(event: BatchGradedEvent): void
+    }
+  }
+
+  package "application.internal.queryservices" {
+    class HarvestCertificationQueryServiceImpl <<service>> {
+      -harvestBatchRepository: HarvestBatchRepository
+      -qualityCertificateRepository: QualityCertificateRepository
+      -externalFarmingService: ExternalFarmingService
+      +handle(query: GetHarvestBatchByIdQuery): Optional<HarvestBatch>
+      +handle(query: GetQualityCertificateByNumberQuery): Optional<QualityCertificate>
+      +handle(query: GetQualityCertificateByPublicHashQuery): Optional<PublicTraceability>
+      +handle(query: GetAllHarvestBatchesByCooperativeIdQuery): List<HarvestBatch>
+      +handle(query: GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery): List<HarvestBatch>
+      +handle(query: GetQualityCertificateByIdQuery): Optional<QualityCertificate>
+      +handle(query: GetQualityCertificateByHarvestBatchIdQuery): Optional<QualityCertificate>
+    }
+  }
+
+  package "application.queryservices" {
+    interface HarvestCertificationQueryService <<service>> {
+      +handle(query: GetHarvestBatchByIdQuery): Optional<HarvestBatch>
+      +handle(query: GetQualityCertificateByNumberQuery): Optional<QualityCertificate>
+      +handle(query: GetQualityCertificateByPublicHashQuery): Optional<PublicTraceability>
+      +handle(query: GetAllHarvestBatchesByCooperativeIdQuery): List<HarvestBatch>
+      +handle(query: GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery): List<HarvestBatch>
+      +handle(query: GetQualityCertificateByIdQuery): Optional<QualityCertificate>
+      +handle(query: GetQualityCertificateByHarvestBatchIdQuery): Optional<QualityCertificate>
+      +PublicTraceability(certificateNumber: String, status: CertificateStatus, authentic: boolean, batchCode: String, cropType: CropType, qualityCategory: QualityCategory, qualityScore: BigDecimal, origin: ExternalFarmingService.FieldOrigin): record
+    }
+  }
+
+  package "domain.model.aggregates" {
+    class HarvestBatch <<aggregate>> {
+      -id: Long
+      -batchCode: String
+      -cooperativeId: Long
+      -memberId: Long
+      -plotId: Long
+      -cropType: CropType
+      -harvestedOn: LocalDate
+      -registeredAt: Instant
+      -status: BatchStatus
+      -netWeightKg: BigDecimal
+      -sampleIdentifier: String
+      -sampleWeightKg: BigDecimal
+      -firstCaliberPercentage: BigDecimal
+      -secondCaliberPercentage: BigDecimal
+      -thirdCaliberPercentage: BigDecimal
+      -pestDamagePercentage: BigDecimal
+      -coffeeCuppingScore: BigDecimal
+      -coffeeFermentDefect: boolean
+      -qualityScore: BigDecimal
+      -qualityCategory: QualityCategory
+      +HarvestBatch(batchCode: String, cooperativeId: Long, memberId: Long, plotId: Long, cropType: CropType, harvestedOn: LocalDate)
+      +{static} reconstitute(id: Long, batchCode: String, cooperativeId: Long, memberId: Long, plotId: Long, cropType: CropType, harvestedOn: LocalDate, registeredAt: Instant, status: BatchStatus, netWeightKg: BigDecimal, sampleIdentifier: String, sampleWeightKg: BigDecimal, firstCaliberPercentage: BigDecimal, secondCaliberPercentage: BigDecimal, thirdCaliberPercentage: BigDecimal, pestDamagePercentage: BigDecimal, coffeeCuppingScore: BigDecimal, coffeeFermentDefect: boolean, qualityScore: BigDecimal, qualityCategory: QualityCategory): HarvestBatch
+      +weigh(netWeightKg: BigDecimal): void
+      +weigh(grossWeightKg: BigDecimal, tareKg: BigDecimal): void
+      +extractSample(identifier: String, weightKg: BigDecimal): void
+      +gradePotato(distribution: PotatoCaliberDistribution): void
+      +cupCoffee(scores: CoffeeCuppingScores, fermentDefect: boolean): void
+      +assignQualityScore(score: BigDecimal, category: QualityCategory): void
+      +markCertified(): void
+      +isReadyForCertification(): boolean
+    }
+
+    class QualityCertificate <<aggregate>> {
+      -id: Long
+      -certificateNumber: String
+      -harvestBatchId: Long
+      -qualityCategory: QualityCategory
+      -certificateHash: String
+      -issuedByUserId: Long
+      -issuedAt: Instant
+      -status: CertificateStatus
+      +QualityCertificate(certificateNumber: String, harvestBatchId: Long, qualityCategory: QualityCategory, certificateHash: String, issuedByUserId: Long, issuedAt: Instant)
+      +{static} reconstitute(id: Long, certificateNumber: String, harvestBatchId: Long, qualityCategory: QualityCategory, certificateHash: String, issuedByUserId: Long, issuedAt: Instant, status: CertificateStatus): QualityCertificate
+      +verify(presentedHash: String): boolean
+      +revoke(): void
+    }
+  }
+
+  package "domain.model.commands" {
+    class CupCoffeeCommand <<record>> {
+      +harvestBatchId: Long
+      +scores: CoffeeCuppingScores
+      +fermentDefect: boolean
+    }
+
+    class ExtractRepresentativeSampleCommand <<record>> {
+      +harvestBatchId: Long
+      +sampleIdentifier: String
+      +sampleWeightKg: BigDecimal
+    }
+
+    class GradePotatoCalibersCommand <<record>> {
+      +harvestBatchId: Long
+      +distribution: PotatoCaliberDistribution
+    }
+
+    class IssueQualityCertificateCommand <<record>> {
+      +certificateNumber: String
+      +harvestBatchId: Long
+      +qualityCategory: QualityCategory
+      +certificateHash: String
+      +issuedByUserId: Long
+      +issuedAt: Instant
+    }
+
+    class RegisterHarvestBatchCommand <<record>> {
+      +batchCode: String
+      +cooperativeId: Long
+      +memberId: Long
+      +plotId: Long
+      +cropType: CropType
+      +harvestedOn: LocalDate
+    }
+
+    class RevokeQualityCertificateCommand <<record>> {
+      +qualityCertificateId: Long
+    }
+
+    class WeighHarvestBatchCommand <<record>> {
+      +harvestBatchId: Long
+      +grossWeightKg: BigDecimal
+      +tareKg: BigDecimal
+    }
+  }
+
+  package "domain.model.events" {
+    class BatchGradedEvent <<domain event>> {
+      +harvestBatchId: Long
+      +cropType: CropType
+    }
+
+    class DeliveredBatchWeighedEvent <<domain event>> {
+      +harvestBatchId: Long
+      +plotId: Long
+      +netWeightKg: BigDecimal
+    }
+  }
+
+  package "domain.model.queries" {
+    class GetAllHarvestBatchesByCooperativeIdAndMemberIdsQuery <<record>> {
+      +cooperativeId: Long
+      +memberIds: List<Long>
+    }
+
+    class GetAllHarvestBatchesByCooperativeIdQuery <<record>> {
+      +cooperativeId: Long
+    }
+
+    class GetHarvestBatchByIdQuery <<record>> {
+      +harvestBatchId: Long
+    }
+
+    class GetQualityCertificateByHarvestBatchIdQuery <<record>> {
+      +harvestBatchId: Long
+    }
+
+    class GetQualityCertificateByIdQuery <<record>> {
+      +qualityCertificateId: Long
+    }
+
+    class GetQualityCertificateByNumberQuery <<record>> {
+      +certificateNumber: String
+    }
+
+    class GetQualityCertificateByPublicHashQuery <<record>> {
+      +certificateNumber: String
+      +certificateHash: String
+    }
+  }
+
+  package "domain.model.valueobjects" {
+    enum BatchStatus <<enum>> {
+      PENDING
+      GRADED
+      CERTIFIED
+    }
+
+    enum CertificateStatus <<enum>> {
+      ACTIVE
+      REVOKED
+    }
+
+    class CoffeeCuppingScores <<value object>> {
+      +aroma: Percentage
+      +flavor: Percentage
+      +acidity: Percentage
+      +body: Percentage
+      +totalScore: Percentage
+      +{static} from(aroma: BigDecimal, flavor: BigDecimal, acidity: BigDecimal, body: BigDecimal, totalScore: BigDecimal): CoffeeCuppingScores
+    }
+
+    enum CropType <<enum>> {
+      ANDEAN_POTATO
+      SPECIALTY_COFFEE
+    }
+
+    class Percentage <<value object>> {
+      +value: BigDecimal
+    }
+
+    class PotatoCaliberDistribution <<value object>> {
+      +firstPercentage: Percentage
+      +secondPercentage: Percentage
+      +thirdPercentage: Percentage
+      +pestDamagePercentage: Percentage
+      +{static} from(firstPercentage: BigDecimal, secondPercentage: BigDecimal, thirdPercentage: BigDecimal, pestDamagePercentage: BigDecimal): PotatoCaliberDistribution
+    }
+
+    enum QualityCategory <<enum>> {
+      PREMIUM_GOLD
+      STANDARD
+      B_GRADE_REQUIRES_SORTING
+      SPECIALTY_COFFEE
+      COMMERCIAL_COFFEE
+    }
+  }
+
+  package "domain.repositories" {
+    interface HarvestBatchRepository <<repository>> {
+      +findByCooperativeId(cooperativeId: Long): List<HarvestBatch>
+      +findByCooperativeIdAndMemberIdIn(cooperativeId: Long, memberIds: List<Long>): List<HarvestBatch>
+      +findById(id: Long): Optional<HarvestBatch>
+      +findByBatchCode(batchCode: String): Optional<HarvestBatch>
+      +existsByBatchCode(batchCode: String): boolean
+      +save(harvestBatch: HarvestBatch): HarvestBatch
+    }
+
+    interface QualityCertificateRepository <<repository>> {
+      +findById(id: Long): Optional<QualityCertificate>
+      +findByCertificateNumber(certificateNumber: String): Optional<QualityCertificate>
+      +findByHarvestBatchId(harvestBatchId: Long): Optional<QualityCertificate>
+      +existsByCertificateNumber(certificateNumber: String): boolean
+      +existsByHarvestBatchId(harvestBatchId: Long): boolean
+      +save(qualityCertificate: QualityCertificate): QualityCertificate
+    }
+  }
+
+  package "infrastructure.acl" {
+    class ExternalFarmingServiceImpl <<adapter>> {
+      -farmingContextFacade: FarmingContextFacade
+      +findOriginByPlotId(plotId: Long): Optional<FieldOrigin>
+      +fetchOwnerUserIdByPlotId(plotId: Long): Optional<Long>
+    }
+
+    class ExternalProfilesServiceImpl <<adapter>> {
+      -profilesContextFacade: ProfilesContextFacade
+      +memberBelongsToCooperative(cooperativeId: Long, memberId: Long): boolean
+      +managesCooperative(userId: Long, cooperativeId: Long): boolean
+      +fetchUserIdOfActiveMember(cooperativeId: Long, memberId: Long): Optional<Long>
+      +fetchActiveMemberIds(userId: Long, cooperativeId: Long): List<Long>
+    }
+  }
+
+  package "infrastructure.documents" {
+    class PdfQrGeneratorAssembler <<adapter>> {
+      +{static} generate(batch: HarvestBatch, certificateNumber: String, issuedByUserId: Long, issuedAt: Instant, publicBaseUrl: String): GeneratedCertificate
+      +{static} renderIssued(batch: HarvestBatch, certificateNumber: String, issuedByUserId: Long, issuedAt: Instant, hash: String, publicBaseUrl: String): byte[]
+      +GeneratedCertificate(pdf: byte[], qrPng: byte[], sha256Hash: String): record
+    }
+  }
+
+  package "infrastructure.persistence.jpa.adapters" {
+    class HarvestBatchRepositoryImpl <<adapter>> {
+      -harvestBatchPersistenceRepository: HarvestBatchPersistenceRepository
+      -domainEventPublisher: DomainEventPublisher
+      +findByCooperativeId(cooperativeId: Long): List<HarvestBatch>
+      +findByCooperativeIdAndMemberIdIn(cooperativeId: Long, memberIds: List<Long>): List<HarvestBatch>
+      +findById(id: Long): Optional<HarvestBatch>
+      +findByBatchCode(batchCode: String): Optional<HarvestBatch>
+      +existsByBatchCode(batchCode: String): boolean
+      +save(harvestBatch: HarvestBatch): HarvestBatch
+    }
+
+    class QualityCertificateRepositoryImpl <<adapter>> {
+      -qualityCertificatePersistenceRepository: QualityCertificatePersistenceRepository
+      +findById(id: Long): Optional<QualityCertificate>
+      +findByCertificateNumber(certificateNumber: String): Optional<QualityCertificate>
+      +findByHarvestBatchId(harvestBatchId: Long): Optional<QualityCertificate>
+      +existsByCertificateNumber(certificateNumber: String): boolean
+      +existsByHarvestBatchId(harvestBatchId: Long): boolean
+      +save(qualityCertificate: QualityCertificate): QualityCertificate
+    }
+  }
+}
+
+' Collaborators from other bounded contexts and the Shared Kernel
+
+package "com.dymbia.sumaqagro.platform.farming.interfaces.acl" {
+  interface FarmingContextFacade <<facade>> {
+    +fetchOwnerUserIdByFieldPlotId(fieldPlotId: Long): Long
+    +existsFieldPlotById(fieldPlotId: Long): boolean
+    +fetchFieldPlotNameById(fieldPlotId: Long): String
+    +fetchFieldPlotRegionById(fieldPlotId: Long): String
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.profiles.interfaces.acl" {
+  interface ProfilesContextFacade <<facade>> {
+    +managesCooperative(userId: Long, cooperativeId: Long): boolean
+    +isActiveMemberOfCooperative(cooperativeId: Long, memberId: Long): boolean
+    +fetchUserIdOfActiveCooperativeMember(cooperativeId: Long, memberId: Long): Long
+    +fetchActiveMemberIdsByUserIdAndCooperativeId(userId: Long, cooperativeId: Long): List<Long>
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.shared.domain.model.aggregates" {
+  abstract class AbstractDomainAggregateRoot<T> <<base aggregate>> {
+    #registerDomainEvent(event: Object): void
+    +domainEvents(): Collection<Object>
+    +clearDomainEvents(): void
+  }
+}
+
+package "com.dymbia.sumaqagro.platform.shared.infrastructure.events" {
+  class DomainEventPublisher <<component>> {
+    +publishAndClearEvents(aggregate: T): void
+  }
+}
+
+' Relationships
+
+' --- Harvest Certification Bounded Context Relationships ---
+HarvestBatchCommandServiceImpl ..|> HarvestBatchCommandService
+HarvestBatchCommandServiceImpl --> HarvestBatchRepository
+HarvestBatchCommandServiceImpl --> ExternalProfilesService
+QualityCertificateCommandServiceImpl ..|> QualityCertificateCommandService
+QualityCertificateCommandServiceImpl --> QualityCertificateRepository
+QualityCertificateCommandServiceImpl --> HarvestBatchRepository
+BatchGradedEventHandler --> HarvestBatchRepository
+BatchGradedEventHandler ..> BatchGradedEvent : handles
+HarvestCertificationQueryServiceImpl ..|> HarvestCertificationQueryService
+HarvestCertificationQueryServiceImpl --> HarvestBatchRepository
+HarvestCertificationQueryServiceImpl --> QualityCertificateRepository
+HarvestCertificationQueryServiceImpl --> ExternalFarmingService
+HarvestBatch --|> AbstractDomainAggregateRoot
+HarvestBatch --> CropType
+HarvestBatch --> BatchStatus
+HarvestBatch --> QualityCategory
+HarvestBatch ..> BatchGradedEvent : registers
+HarvestBatch ..> DeliveredBatchWeighedEvent : registers
+QualityCertificate --|> AbstractDomainAggregateRoot
+QualityCertificate --> QualityCategory
+QualityCertificate --> CertificateStatus
+CupCoffeeCommand --> CoffeeCuppingScores
+GradePotatoCalibersCommand --> PotatoCaliberDistribution
+IssueQualityCertificateCommand --> QualityCategory
+RegisterHarvestBatchCommand --> CropType
+BatchGradedEvent --> CropType
+CoffeeCuppingScores --> Percentage
+PotatoCaliberDistribution --> Percentage
+ExternalFarmingServiceImpl ..|> ExternalFarmingService
+ExternalProfilesServiceImpl ..|> ExternalProfilesService
+HarvestBatchRepositoryImpl ..|> HarvestBatchRepository
+HarvestBatchRepositoryImpl --> DomainEventPublisher
+QualityCertificateRepositoryImpl ..|> QualityCertificateRepository
+CertificationAccess --> HarvestCertificationQueryService
+CertificationAccess --> ExternalProfilesService
+CertificationAccess --> ExternalFarmingService
+CertificationWorkspaceController --> HarvestCertificationQueryService
+CertificationWorkspaceController --> CertificationAccess
+HarvestBatchesController --> CertificationAccess
+HarvestBatchesController --> HarvestBatchCommandService
+HarvestBatchesController --> HarvestCertificationQueryService
+PublicTraceabilityController --> HarvestCertificationQueryService
+QualityCertificatesController --> CertificationAccess
+QualityCertificatesController --> QualityCertificateCommandService
+QualityCertificatesController --> HarvestCertificationQueryService
+CupCoffeeCommandFromResourceAssembler ..> CupCoffeeCommand
+CupCoffeeCommandFromResourceAssembler ..> CupCoffeeResource
+ExtractRepresentativeSampleCommandFromResourceAssembler ..> ExtractRepresentativeSampleCommand
+ExtractRepresentativeSampleCommandFromResourceAssembler ..> ExtractRepresentativeSampleResource
+GradePotatoCalibersCommandFromResourceAssembler ..> GradePotatoCalibersCommand
+GradePotatoCalibersCommandFromResourceAssembler ..> GradePotatoCalibersResource
+HarvestBatchResourceFromEntityAssembler ..> HarvestBatch
+HarvestBatchResourceFromEntityAssembler ..> HarvestBatchResource
+IssueQualityCertificateCommandFromResourceAssembler ..> IssueQualityCertificateCommand
+IssueQualityCertificateCommandFromResourceAssembler ..> IssueQualityCertificateResource
+IssueQualityCertificateCommandFromResourceAssembler ..> QualityCategory
+PublicTraceabilityResourceFromEntityAssembler ..> PublicTraceabilityResource
+QualityCertificateResourceFromEntityAssembler ..> QualityCertificate
+QualityCertificateResourceFromEntityAssembler ..> QualityCertificateResource
+RegisterHarvestBatchCommandFromResourceAssembler ..> RegisterHarvestBatchCommand
+RegisterHarvestBatchCommandFromResourceAssembler ..> RegisterHarvestBatchResource
+WeighHarvestBatchCommandFromResourceAssembler ..> WeighHarvestBatchCommand
+WeighHarvestBatchCommandFromResourceAssembler ..> WeighHarvestBatchResource
+
+' --- Cross-Context Invocations ---
+ExternalFarmingServiceImpl ..> FarmingContextFacade : cross-context sync (ACL)
+ExternalProfilesServiceImpl ..> ProfilesContextFacade : cross-context sync (ACL)
+
+@enduml

@@ -54,12 +54,25 @@ public class AgroMonitoringSatelliteImagery implements SatelliteImagery {
                 throw new Unavailable();
             }
 
-            return Arrays.stream(scenes)
+            var candidates = Arrays.stream(scenes)
                     .filter(scene -> scene != null && scene.hasStatistics())
                     .sorted(Comparator.comparing(Scene::dt).reversed().thenComparing(Scene::type))
-                    .map(scene -> readMeasurement(scene, polygonId))
-                    .flatMap(Optional::stream)
-                    .findFirst();
+                    .toList();
+
+            Measurement latestPartial = null;
+            for (var scene : candidates) {
+                var measurement = readMeasurement(scene, polygonId).orElse(null);
+                if (measurement == null) {
+                    continue;
+                }
+                if (measurement.ndviMean() != null && measurement.ndwiMean() != null) {
+                    return Optional.of(measurement);
+                }
+                if (latestPartial == null) {
+                    latestPartial = measurement;
+                }
+            }
+            return Optional.ofNullable(latestPartial);
         } catch (RestClientException | IllegalArgumentException e) {
             // RestClient errors can contain the request URL with the API key.
             throw new Unavailable();
